@@ -337,7 +337,6 @@ Resources:
   #   Properties:
   #     ConnectionName: GitHubConnection
   #     ProviderType: GitHub
-
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Metadata:

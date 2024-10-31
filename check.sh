@@ -2,14 +2,13 @@
 
 # Format the files
 echo "Formatting..."
-rain fmt ./infrastructure/pipeline.yml -w
-rain fmt ./template.yml -w
+rain fmt ./templates/pipeline.yml -w
+rain fmt ./templates/stack_test.yml -w
 
 # Check all template files
 echo "Running cfn-lint..."
-cfn-lint ./infrastructure/**/*.yml
-cfn-lint ./template.yml
+cfn-lint ./templates/**/*.yml
+#cfn-lint ./template.yml
 
 echo "Running cfn-nag..."
-cfn_nag_scan --input-path ./infrastructure
-cfn_nag_scan --input-path ./template.yml
+cfn_nag_scan --input-path ./templates
