@@ -4,6 +4,10 @@ Description: |
   Base infrastructure template for CI/CD pipeline and required roles. This template must be deployed manually.
 
 Parameters:
+  AppName:
+    Description: This name is used as a prefix for resource names
+    Type: String
+
   CodeBuildImage:
     Type: String
     Default: aws/codebuild/standard:7.0
@@ -30,7 +34,10 @@ Resources:
   # Pipeline artifact bucket
   ArtifactBucket:
     Type: AWS::S3::Bucket
+    Metadata:
+      Comment: This bucket is used to store artifacts for the CI/CD pipeline
     Properties:
+      BucketName: !Sub ${AppName}-buildartifacts-${AWS::Region}-${AWS::AccountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -204,7 +211,7 @@ Resources:
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Sub ${AWS::StackName}-build-project
+      Name: !Sub ${AppName}-build
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -221,11 +228,13 @@ Resources:
       Source:
         Type: CODEPIPELINE
         BuildSpec: buildspec.yml
+      TimeoutInMinutes: 120
 
   # Deployment pipeline with a stage that deploys a stack for each environment
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
+      Name: !Ref AppName
       RoleArn: !GetAtt PipelineExecutionRole.Arn
       ArtifactStore:
         Type: S3

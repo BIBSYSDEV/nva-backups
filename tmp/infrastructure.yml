@@ -297,5 +297,5 @@ Resources:
 
 Outputs:
   ArtifactBucketName:
-    Description: S3 Bucket for Pipeline artifacts
+    Description: S3 bucket for pipeline artifacts
     Value: !Ref ArtifactBucket
