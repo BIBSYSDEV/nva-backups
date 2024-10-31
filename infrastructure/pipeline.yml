@@ -3,6 +3,20 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: |
   Base infrastructure template for CI/CD pipeline and required roles. This template must be deployed manually.
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: GitHub configuration
+        Parameters:
+          - GitHubOwner
+          - GitHubRepo
+          - GitHubBranch
+      - Label:
+          default: CodeBuild configuration
+        Parameters:
+          - CodeBuildImage
+
 Parameters:
   AppName:
     Description: This name is used as a prefix for resource names
@@ -26,22 +40,33 @@ Parameters:
     Default: main
 
   GitHubConnectionArn:
-    Description: ARN of the GitHub connection created in CodeStar
+    Description: GitHubConnection ARN (this must be created manually)
     Type: String
 
 Resources:
-
-  # Pipeline artifact bucket
-  ArtifactBucket:
+  LogBucket:
     Type: AWS::S3::Bucket
     Metadata:
-      Comment: This bucket is used to store artifacts for the CI/CD pipeline
+      Comment: This bucket stores access logs for other buckets
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: Logging access to the log bucket is not required and would lead to an endless chain of log buckets. Should we have buckets all the way down?
     Properties:
-      BucketName: !Sub ${AppName}-buildartifacts-${AWS::Region}-${AWS::AccountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      BucketName: !Sub ${AppName}-logs-${AWS::AccountId}
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+
+            # TODO: Consider making this stricter when the template is finalized
+            Mode: GOVERNANCE # Could use COMPLIANCE
+            Days: 14 # Could replace this with 'Years: 1'
+      ObjectLockEnabled: true
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -50,8 +75,85 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  # CloudFormation execution role - Needs permissions for resources it will create
-  CFNExecutionRole:
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Statement:
+
+          # Enforce access over HTTPS
+          - Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+            Effect: Deny
+            Principal:
+              AWS: '*'
+            Resource:
+              - !Sub ${LogBucket.Arn}
+              - !Sub ${LogBucket.Arn}/*
+
+          # Allow the logging service to write logs
+          - Action: s3:PutObject
+            Condition:
+              ArnLike:
+                aws:SourceArn: !GetAtt LogBucket.Arn
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Resource:
+              - !Sub ${LogBucket.Arn}/*
+        Version: "2012-10-17"
+
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      Comment: This bucket is used by the CI/CD pipeline to store artifacts
+    Properties:
+      BucketName: !Sub ${AppName}-build-artifacts-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogBucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectAcl
+            Resource:
+              - !Sub ${ArtifactBucket.Arn}/*
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !GetAtt ArtifactBucket.Arn
+
+  # Role used to deploy changes to CloudFormation stacks
+  DeployStackRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -62,7 +164,7 @@ Resources:
               Service: cloudformation.amazonaws.com
             Action: sts:AssumeRole
       Policies:
-        - PolicyName: CFNExecutionPolicy
+        - PolicyName: DeployStackPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -108,7 +210,8 @@ Resources:
                   - s3:PutBucketPublicAccessBlock
                 Resource: !Sub arn:aws:s3:::${AWS::StackName}-*
 
-  # Pipeline execution role - Only needs to orchestrate pipeline and pass roles
+  # Role used to manage and orchestrate the CI/CD pipeline.
+  # This passes other roles to relevant AWS services.
   PipelineExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -121,7 +224,7 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: PipelineExecutionPolicy
+        - PolicyName: BuildArtifactPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -136,32 +239,53 @@ Resources:
                 Resource:
                   - !GetAtt ArtifactBucket.Arn
                   - !Sub ${ArtifactBucket.Arn}/*
+        - PolicyName: PipelineExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
 
-              # Start CodeBuild for validation
+              # # S3 artifact bucket access
+              # - Effect: Allow
+              #   Action:
+              #     - s3:GetObject
+              #     - s3:GetObjectVersion
+              #     - s3:PutObject
+              #     - s3:ListBucket
+              #   Resource:
+              #     - !GetAtt ArtifactBucket.Arn
+              #     - !Sub ${ArtifactBucket.Arn}/*
+
+              # Access to GitHub connection
+              - Effect: Allow
+                Action: codestar-connections:UseConnection
+                Resource: !Ref GitHubConnectionArn
+
+              # Access to start builds
               - Effect: Allow
                 Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                 Resource: !GetAtt CodeBuildProject.Arn
 
-              # Minimal CloudFormation permissions to initiate deployments
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:UpdateStack
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:ExecuteChangeSet
-                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
+              # # Minimal CloudFormation permissions for stack operations
+              # - Effect: Allow
+              #   Action:
+              #     - cloudformation:CreateStack
+              #     - cloudformation:DeleteStack
+              #     - cloudformation:DescribeStacks
+              #     - cloudformation:UpdateStack
+              #     - cloudformation:CreateChangeSet
+              #     - cloudformation:DeleteChangeSet
+              #     - cloudformation:DescribeChangeSet
+              #     - cloudformation:ExecuteChangeSet
+              #   Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
 
-              # Pass roles to services
+              # Let the pipeline delegate these roles to the CodeBuild
+              # and CloudFormation services.
               - Effect: Allow
                 Action: iam:PassRole
                 Resource:
-                  - !GetAtt CFNExecutionRole.Arn
+                  - !GetAtt DeployStackRole.Arn
                   - !GetAtt CodeBuildRole.Arn
                 Condition:
                   StringEquals:
@@ -169,7 +293,7 @@ Resources:
                       - cloudformation.amazonaws.com
                       - codebuild.amazonaws.com
 
-  # CodeBuild role - Only needs to run validation and handle artifacts
+  # Role used to run CodeBuild jobs
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -207,11 +331,23 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
 
-  # CodeBuild project for deployment of all environments
+  # GitHub connection for CodePipeline
+  # GitHubConnection:
+  #   Type: AWS::CodeStarConnections::Connection
+  #   Properties:
+  #     ConnectionName: GitHubConnection
+  #     ProviderType: GitHub
+
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
+    Metadata:
+      Comment: CodeBuild project for deployment of all other stacks
+      cfn_nag:
+        rules_to_suppress:
+          - id: W32
+            reason: Leaving 'EncryptionKey' unspecified to use the default key provided by AWS, which is fine for this use case.
     Properties:
-      Name: !Sub ${AppName}-build
+      Name: !Sub ${AppName}-build-project-${AWS::AccountId}
       ServiceRole: !GetAtt CodeBuildRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -230,11 +366,11 @@ Resources:
         BuildSpec: buildspec.yml
       TimeoutInMinutes: 120
 
-  # Deployment pipeline with a stage that deploys a stack for each environment
+  # Deployment pipeline with stages that deploys a stack for each environment
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Ref AppName
+      Name: !Sub ${AppName}-build-pipeline-${AWS::AccountId}
       RoleArn: !GetAtt PipelineExecutionRole.Arn
       ArtifactStore:
         Type: S3
@@ -283,7 +419,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
-                RoleArn: !GetAtt CFNExecutionRole.Arn
+                RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "sandbox"}'
@@ -301,7 +437,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
-                RoleArn: !GetAtt CFNExecutionRole.Arn
+                RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}--dev
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "dev"}'
@@ -326,7 +462,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
-                RoleArn: !GetAtt CFNExecutionRole.Arn
+                RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "test"}'
@@ -351,7 +487,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
-                RoleArn: !GetAtt CFNExecutionRole.Arn
+                RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}--prod
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "prod"}'

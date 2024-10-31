@@ -1,10 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
+
 Description: Core infrastructure resources that are identical across environments
 
 Parameters:
   Environment:
-    Type: String
     Description: Deployment environment
+    Type: String
     AllowedValues:
       - sandbox
       - dev
@@ -39,6 +40,7 @@ Outputs:
   BucketName:
     Description: Name of the created S3 bucket
     Value: !Ref DataBucket
+
   BucketArn:
     Description: ARN of the created S3 bucket
     Value: !GetAtt DataBucket.Arn
