@@ -170,20 +170,20 @@ Resources:
             Statement:
 
               # CloudFormation stack operations
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:UpdateStack
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:SetStackPolicy
-                  - cloudformation:ValidateTemplate
-                  - cloudformation:GetTemplateSummary
-                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*
+              # - Effect: Allow
+              #   Action:
+              #     - cloudformation:CreateStack
+              #     - cloudformation:DeleteStack
+              #     - cloudformation:DescribeStacks
+              #     - cloudformation:UpdateStack
+              #     - cloudformation:CreateChangeSet
+              #     - cloudformation:DeleteChangeSet
+              #     - cloudformation:DescribeChangeSet
+              #     - cloudformation:ExecuteChangeSet
+              #     - cloudformation:SetStackPolicy
+              #     - cloudformation:ValidateTemplate
+              #     - cloudformation:GetTemplateSummary
+              #   Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*
 
               # IAM role operations
               - Effect: Allow
@@ -267,18 +267,18 @@ Resources:
                   - codebuild:StartBuild
                 Resource: !GetAtt CodeBuildProject.Arn
 
-              # # Minimal CloudFormation permissions for stack operations
-              # - Effect: Allow
-              #   Action:
-              #     - cloudformation:CreateStack
-              #     - cloudformation:DeleteStack
-              #     - cloudformation:DescribeStacks
-              #     - cloudformation:UpdateStack
-              #     - cloudformation:CreateChangeSet
-              #     - cloudformation:DeleteChangeSet
-              #     - cloudformation:DescribeChangeSet
-              #     - cloudformation:ExecuteChangeSet
-              #   Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
+              # Minimal CloudFormation permissions for stack operations
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
 
               # Let the pipeline delegate these roles to the CodeBuild
               # and CloudFormation services.

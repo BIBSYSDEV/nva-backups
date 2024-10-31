@@ -3,7 +3,7 @@
 # Format the files
 echo "Formatting..."
 rain fmt ./templates/pipeline.yml -w
-rain fmt ./templates/stack_test.yml -w
+rain fmt ./templates/template.yml -w
 
 # Check all template files
 echo "Running cfn-lint..."
