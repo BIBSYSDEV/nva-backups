@@ -13,10 +13,12 @@ phases:
     commands:
       - echo "Validating CloudFormation template"
       - cfn-lint ./templates/**/*.yml
-  artifacts:
-    discard-paths: yes
-    files:
-      - template.yml
+
+artifacts:
+  discard-paths: yes
+  files:
+    - template.yml
+
 cache:
   paths:
     - "/root/venv/**/*"
