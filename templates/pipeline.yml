@@ -222,8 +222,6 @@ Resources:
                 Action:
                   - backup:CreateBackupVault
                   - backup:CreateLogicallyAirGappedBackupVault
-                  - backup:DeleteBackupVault
-                  - backup:DeleteLogicallyAirGappedBackupVault
                   - backup:CreateBackupSelection
                   - backup:DeleteBackupSelection
                   - backup:CreateBackupPlan
@@ -240,8 +238,8 @@ Resources:
                   - backup:UpdateBackupPlan
                   - backup:PutBackupVaultAccessPolicy
                 Resource:
-                  - arn:aws:backup:::* # For vault-level operations
-                  - arn:aws:backup:::*/* # For object-level operations
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
 
   BuildServiceRole:
     Type: AWS::IAM::Role
