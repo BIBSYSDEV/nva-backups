@@ -62,6 +62,7 @@ Resources:
         ObjectLockEnabled: Enabled
         Rule:
           DefaultRetention:
+
             # TODO: Consider making this stricter when the template is finalized
             Mode: GOVERNANCE # Could use COMPLIANCE
             Days: 14 # Could replace this with 'Years: 1'
@@ -80,6 +81,7 @@ Resources:
       Bucket: !Ref LogBucket
       PolicyDocument:
         Statement:
+
           # Enforce access over HTTPS
           - Action: s3:*
             Condition:
@@ -87,7 +89,7 @@ Resources:
                 aws:SecureTransport: false
             Effect: Deny
             Principal:
-              AWS: "*"
+              AWS: '*'
             Resource:
               - !Sub ${LogBucket.Arn}
               - !Sub ${LogBucket.Arn}/*
@@ -166,7 +168,6 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              # CloudFormation stack operations
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
@@ -180,9 +181,7 @@ Resources:
                   - cloudformation:SetStackPolicy
                   - cloudformation:ValidateTemplate
                   - cloudformation:GetTemplateSummary
-                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*
-
-              # IAM role operations
+                Resource: arn:aws:cloudformation:::/*
               - Effect: Allow
                 Action:
                   - iam:CreateRole
@@ -193,7 +192,7 @@ Resources:
                   - iam:GetRolePolicy
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
-                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*
+                Resource: arn:aws:iam:::role/*
         - PolicyName: DeployS3Policy
           PolicyDocument:
             Version: "2012-10-17"
@@ -215,7 +214,7 @@ Resources:
                   - s3:PutBucketWebsite
                   - s3:PutEncryptionConfiguration
                   - s3:PutBucketPublicAccessBlock
-                Resource: !Sub arn:aws:s3:::${AWS::StackName}-*
+                Resource: arn:aws:s3:::/*
 
   # Role used to manage and orchestrate the CI/CD pipeline.
   # This passes other roles to relevant AWS services.
@@ -235,6 +234,7 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+
               # S3 artifact bucket access
               - Effect: Allow
                 Action:
@@ -269,6 +269,7 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
+
         # TODO add 'ssm:GetParameters' if needed
         - PolicyName: GitHubPolicy
           PolicyDocument:
