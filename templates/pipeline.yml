@@ -272,8 +272,6 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
-
-        # TODO add 'ssm:GetParameters' if needed
         - PolicyName: GitHubPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -445,7 +443,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
-                StackName: !Sub ${AWS::StackName}--dev
+                StackName: !Sub ${AWS::StackName}-dev
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "dev"}'
               InputArtifacts:
@@ -495,7 +493,7 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
-                StackName: !Sub ${AWS::StackName}--prod
+                StackName: !Sub ${AWS::StackName}-prod
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: '{"Environment": "prod"}'
               InputArtifacts:

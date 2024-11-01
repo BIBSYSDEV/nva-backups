@@ -15,8 +15,10 @@ Parameters:
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
+    Metadata:
+      Comment: Example bucket for the ${Environment} environment
     Properties:
-      BucketName: !Sub ${AWS::StackName}-data-${Environment}
+      BucketName: !Sub ${AWS::StackName}-example
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
