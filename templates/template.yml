@@ -12,6 +12,11 @@ Parameters:
       - test
       - prod
 
+  OwnerAccountId:
+    Description: AWS Account ID of the account that can write to the backup vault
+    Type: String
+    Default: "750639270376" # FIXME: Account ID of sandbox account, just to test
+
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
@@ -41,11 +46,66 @@ Resources:
   BackupVault:
     Type: AWS::Backup::LogicallyAirGappedBackupVault
     Properties:
+      AccessPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCrossAccountBackup
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${OwnerAccountId}:root
+            Action:
+              - backup:StartCopyJob
+              - backup:GetBackupVaultAccessPolicy
+              - backup:GetRecoveryPointRestoreMetadata
+              - backup:ListRecoveryPointsByBackupVault
+              - backup:CopyIntoBackupVault
+            Resource:
+              - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault/${AWS::StackName}-*
+              - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point/*
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault
       EncryptionKeyArn: STRING
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
       MinRetentionDays: 7
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
+
+  BackupVaultShare:
+    Type: AWS::RAM::ResourceShare
+    Properties:
+      AllowExternalPrincipals: false
+      Name: !Sub ${AWS::StackName}-backup-vault-share
+      PermissionArns:
+        - !GetAtt BackupVaultPermission.Arn
+      Principals:
+        - !Ref OwnerAccountId
+      ResourceArns:
+        - !GetAtt BackupVault.BackupVaultArn
+
+  BackupVaultPermission:
+    Type: AWS::RAM::Permission
+    Properties:
+      Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
+      ResourceType: backup:backup-vault
+      PolicyTemplate: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "backup:StartCopyJob",
+                "backup:GetBackupVaultAccessPolicy",
+                "backup:GetRecoveryPointRestoreMetadata",
+                "backup:ListRecoveryPointsByBackupVault",
+                "backup:CopyIntoBackupVault"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "${OwnerAccountId}"
+                }
+              }
+            }
+          ]
+        }
 
 Outputs:
   BucketName:
