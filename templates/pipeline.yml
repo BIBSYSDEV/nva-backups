@@ -12,16 +12,13 @@ Metadata:
           - GitHubOwner
           - GitHubRepo
           - GitHubBranch
+          - GitHubConnectionArn
       - Label:
           default: CodeBuild configuration
         Parameters:
           - CodeBuildImage
 
 Parameters:
-  AppName:
-    Description: This name is used as a prefix for resource names
-    Type: String
-
   CodeBuildImage:
     Type: String
     Default: aws/codebuild/standard:7.0
@@ -57,7 +54,7 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: !Sub ${AppName}-logs-${AWS::AccountId}
+      BucketName: !Sub ${AWS::StackName}-logs-${AWS::AccountId}
       ObjectLockConfiguration:
         ObjectLockEnabled: Enabled
         Rule:
@@ -113,7 +110,7 @@ Resources:
     Metadata:
       Comment: This bucket is used by the CI/CD pipeline to store artifacts
     Properties:
-      BucketName: !Sub ${AppName}-build-artifacts-${AWS::AccountId}
+      BucketName: !Sub ${AWS::StackName}-build-artifacts-${AWS::AccountId}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -352,7 +349,7 @@ Resources:
           - id: W32
             reason: Leaving 'EncryptionKey' unspecified to use the default key provided by AWS, which is fine for this use case.
     Properties:
-      Name: !Sub ${AppName}-build-project-${AWS::AccountId}
+      Name: !Sub ${AWS::StackName}-build-project-${AWS::AccountId}
       ServiceRole: !GetAtt BuildServiceRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -375,7 +372,7 @@ Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Sub ${AppName}-build-pipeline-${AWS::AccountId}
+      Name: !Sub ${AWS::StackName}-build-pipeline-${AWS::AccountId}
       RoleArn: !GetAtt UpdateS3AndCFNRole.Arn
       ArtifactStore:
         Type: S3
