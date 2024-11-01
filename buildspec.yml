@@ -9,6 +9,7 @@ phases:
       # - . /root/venv/bin/activate
       - python3 -m pip install --upgrade pip
       - pip3 install cfn-lint
+      - gem install cfn-nag
   build:
     commands:
       - echo "Validating CloudFormation template"
