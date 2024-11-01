@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Core infrastructure resources that are identical across environments
+Description: This stack creates a logically-air gapped backup vault and supporting resources, intended to be used for storing copies of backups for all services in a given environment.
 
 Parameters:
   Environment:
@@ -37,6 +37,15 @@ Resources:
             Transitions:
               - TransitionInDays: 90
                 StorageClass: INTELLIGENT_TIERING
+
+  BackupVault:
+    Type: AWS::Backup::LogicallyAirGappedBackupVault
+    Properties:
+      BackupVaultName: !Sub ${AWS::StackName}-backup-vault
+      EncryptionKeyArn: STRING
+      MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
+      MinRetentionDays: 7
+      VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
 Outputs:
   BucketName:
