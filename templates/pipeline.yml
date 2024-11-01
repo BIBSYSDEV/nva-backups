@@ -371,7 +371,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       Name: !Sub ${AppName}-build-pipeline-${AWS::AccountId}
-      RoleArn: !GetAtt BuildServiceRole.Arn
+      RoleArn: !GetAtt UpdateS3AndCFNRole.Arn
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
