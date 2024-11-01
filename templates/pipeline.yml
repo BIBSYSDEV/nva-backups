@@ -62,7 +62,6 @@ Resources:
         ObjectLockEnabled: Enabled
         Rule:
           DefaultRetention:
-
             # TODO: Consider making this stricter when the template is finalized
             Mode: GOVERNANCE # Could use COMPLIANCE
             Days: 14 # Could replace this with 'Years: 1'
@@ -81,7 +80,6 @@ Resources:
       Bucket: !Ref LogBucket
       PolicyDocument:
         Statement:
-
           # Enforce access over HTTPS
           - Action: s3:*
             Condition:
@@ -89,7 +87,7 @@ Resources:
                 aws:SecureTransport: false
             Effect: Deny
             Principal:
-              AWS: '*'
+              AWS: "*"
             Resource:
               - !Sub ${LogBucket.Arn}
               - !Sub ${LogBucket.Arn}/*
@@ -168,7 +166,6 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-
               # CloudFormation stack operations
               - Effect: Allow
                 Action:
@@ -203,11 +200,19 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - s3:GetBucketPolicy
+                  - s3:GetBucketWebsite
                   - s3:CreateBucket
                   - s3:DeleteBucket
-                  - s3:PutBucketPolicy
                   - s3:DeleteBucketPolicy
+                  - s3:DeleteBucketWebsite
+                  - s3:PutLifecycleConfiguration
                   - s3:PutBucketVersioning
+                  - s3:PutBucketCORS
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketAcl
+                  - s3:PutBucketNotification
+                  - s3:PutBucketWebsite
                   - s3:PutEncryptionConfiguration
                   - s3:PutBucketPublicAccessBlock
                 Resource: !Sub arn:aws:s3:::${AWS::StackName}-*
@@ -230,7 +235,6 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-
               # S3 artifact bucket access
               - Effect: Allow
                 Action:
@@ -265,7 +269,6 @@ Resources:
             Action: sts:AssumeRole
       Path: /
       Policies:
-
         # TODO add 'ssm:GetParameters' if needed
         - PolicyName: GitHubPolicy
           PolicyDocument:
