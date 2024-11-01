@@ -213,6 +213,32 @@ Resources:
                 Resource:
                   - arn:aws:s3:::* # For bucket-level operations
                   - arn:aws:s3:::*/* # For object-level operations
+        - PolicyName: DeployBackupVaultPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - backup:CreateBackupVault
+                  - backup:DeleteBackupVault
+                  - backup:CreateBackupSelection
+                  - backup:DeleteBackupSelection
+                  - backup:CreateBackupPlan
+                  - backup:DeleteBackupPlan
+                  - backup:DescribeBackupJob
+                  - backup:DescribeBackupVault
+                  - backup:GetBackupPlan
+                  - backup:GetBackupSelection
+                  - backup:ListBackupPlans
+                  - backup:ListBackupSelections
+                  - backup:ListBackupVaults
+                  - backup:ListTags
+                  - backup:TagResource
+                  - backup:UpdateBackupPlan
+                  - backup:PutBackupVaultAccessPolicy
+                Resource:
+                  - arn:aws:backup:::* # For vault-level operations
+                  - arn:aws:backup:::*/* # For object-level operations
 
   BuildServiceRole:
     Type: AWS::IAM::Role

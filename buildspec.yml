@@ -13,6 +13,8 @@ phases:
     commands:
       - echo "Validating CloudFormation template"
       - cfn-lint ./templates/**/*.yml
+      - echo "Running cfn-nag..."
+      - cfn_nag_scan --input-path ./templates
 
 artifacts:
   discard-paths: yes
