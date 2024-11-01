@@ -170,20 +170,20 @@ Resources:
             Statement:
 
               # CloudFormation stack operations
-              # - Effect: Allow
-              #   Action:
-              #     - cloudformation:CreateStack
-              #     - cloudformation:DeleteStack
-              #     - cloudformation:DescribeStacks
-              #     - cloudformation:UpdateStack
-              #     - cloudformation:CreateChangeSet
-              #     - cloudformation:DeleteChangeSet
-              #     - cloudformation:DescribeChangeSet
-              #     - cloudformation:ExecuteChangeSet
-              #     - cloudformation:SetStackPolicy
-              #     - cloudformation:ValidateTemplate
-              #     - cloudformation:GetTemplateSummary
-              #   Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:GetTemplateSummary
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}-*
 
               # IAM role operations
               - Effect: Allow
@@ -197,8 +197,10 @@ Resources:
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-*
-
-              # S3 bucket operations
+        - PolicyName: DeployS3Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
               - Effect: Allow
                 Action:
                   - s3:CreateBucket
@@ -212,7 +214,7 @@ Resources:
 
   # Role used to manage and orchestrate the CI/CD pipeline.
   # This passes other roles to relevant AWS services.
-  PipelineExecutionRole:
+  BuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -235,39 +237,95 @@ Resources:
                   - s3:GetObject
                   - s3:GetObjectVersion
                   - s3:PutObject
-                  - s3:ListBucket
                 Resource:
-                  - !GetAtt ArtifactBucket.Arn
                   - !Sub ${ArtifactBucket.Arn}/*
-        - PolicyName: PipelineExecutionPolicy
+        - PolicyName: LogPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
 
-              # # S3 artifact bucket access
-              # - Effect: Allow
-              #   Action:
-              #     - s3:GetObject
-              #     - s3:GetObjectVersion
-              #     - s3:PutObject
-              #     - s3:ListBucket
-              #   Resource:
-              #     - !GetAtt ArtifactBucket.Arn
-              #     - !Sub ${ArtifactBucket.Arn}/*
+  # Role used by CodeBuild to deploy CloudFormation stacks
+  UpdateS3AndCFNRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
 
-              # Access to GitHub connection
+        # TODO add 'ssm:GetParameters' if needed
+        - PolicyName: GitHubPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
               - Effect: Allow
                 Action: codestar-connections:UseConnection
                 Resource: !Ref GitHubConnectionArn
-
-              # Access to start builds
+        - PolicyName: DelegateRolesPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource:
+                  - !GetAtt DeployStackRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService:
+                      - cloudformation.amazonaws.com
+                      - codebuild.amazonaws.com
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
+        - PolicyName: ArtifactBucketPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketVersioning
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource:
+                  - !GetAtt ArtifactBucket.Arn
+                  - !Sub ${ArtifactBucket.Arn}/*
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
               - Effect: Allow
                 Action:
                   - codebuild:BatchGetBuilds
                   - codebuild:StartBuild
                 Resource: !GetAtt CodeBuildProject.Arn
-
-              # Minimal CloudFormation permissions for stack operations
+        - PolicyName: CloudFormationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
               - Effect: Allow
                 Action:
                   - cloudformation:CreateStack
@@ -280,63 +338,6 @@ Resources:
                   - cloudformation:ExecuteChangeSet
                 Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
 
-              # Let the pipeline delegate these roles to the CodeBuild
-              # and CloudFormation services.
-              - Effect: Allow
-                Action: iam:PassRole
-                Resource:
-                  - !GetAtt DeployStackRole.Arn
-                  - !GetAtt CodeBuildRole.Arn
-                Condition:
-                  StringEquals:
-                    iam:PassedToService:
-                      - cloudformation.amazonaws.com
-                      - codebuild.amazonaws.com
-
-  # Role used to run CodeBuild jobs
-  CodeBuildRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: CodeBuildPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-
-              # S3 artifact bucket access
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:PutObject
-                Resource:
-                  - !GetAtt ArtifactBucket.Arn
-                  - !Sub ${ArtifactBucket.Arn}/*
-
-              # CloudWatch Logs access
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource:
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
-
-  # GitHub connection for CodePipeline
-  # GitHubConnection:
-  #   Type: AWS::CodeStarConnections::Connection
-  #   Properties:
-  #     ConnectionName: GitHubConnection
-  #     ProviderType: GitHub
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Metadata:
@@ -347,7 +348,7 @@ Resources:
             reason: Leaving 'EncryptionKey' unspecified to use the default key provided by AWS, which is fine for this use case.
     Properties:
       Name: !Sub ${AppName}-build-project-${AWS::AccountId}
-      ServiceRole: !GetAtt CodeBuildRole.Arn
+      ServiceRole: !GetAtt BuildServiceRole.Arn
       Artifacts:
         Type: CODEPIPELINE
       Cache:
@@ -370,7 +371,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       Name: !Sub ${AppName}-build-pipeline-${AWS::AccountId}
-      RoleArn: !GetAtt PipelineExecutionRole.Arn
+      RoleArn: !GetAtt BuildServiceRole.Arn
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
@@ -500,5 +501,5 @@ Outputs:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
 
   ArtifactBucketName:
-    Description: S3 Bucket for Pipeline artifacts
+    Description: S3 Bucket for build artifacts
     Value: !Ref ArtifactBucket
