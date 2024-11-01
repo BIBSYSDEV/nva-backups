@@ -16,7 +16,7 @@ Resources:
   DataBucket:
     Type: AWS::S3::Bucket
     Metadata:
-      Comment: Example bucket for the ${Environment} environment
+      Comment: !Sub Example bucket for the ${Environment} environment
     Properties:
       BucketName: !Sub ${AWS::StackName}-example
       VersioningConfiguration:
