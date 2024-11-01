@@ -181,7 +181,7 @@ Resources:
                   - cloudformation:SetStackPolicy
                   - cloudformation:ValidateTemplate
                   - cloudformation:GetTemplateSummary
-                Resource: arn:aws:cloudformation:::/*
+                Resource: arn:aws:cloudformation:*:*:stack/*
               - Effect: Allow
                 Action:
                   - iam:CreateRole
@@ -192,7 +192,8 @@ Resources:
                   - iam:GetRolePolicy
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
-                Resource: arn:aws:iam:::role/*
+                Resource: arn:aws:iam::*:role/*
+                # arn:aws:iam:::role/*  (old, maybe works?)
         - PolicyName: DeployS3Policy
           PolicyDocument:
             Version: "2012-10-17"
@@ -214,7 +215,9 @@ Resources:
                   - s3:PutBucketWebsite
                   - s3:PutEncryptionConfiguration
                   - s3:PutBucketPublicAccessBlock
-                Resource: arn:aws:s3:::/*
+                Resource: 
+                  - "arn:aws:s3:::*"  # For bucket-level operations
+                  - "arn:aws:s3:::*/*" # For object-level operations
 
   # Role used to manage and orchestrate the CI/CD pipeline.
   # This passes other roles to relevant AWS services.
