@@ -178,7 +178,9 @@ Resources:
                   - cloudformation:SetStackPolicy
                   - cloudformation:ValidateTemplate
                   - cloudformation:GetTemplateSummary
-                Resource: arn:aws:cloudformation:*:*:stack/*
+                Resource: 
+                  - arn:aws:cloudformation:*:*:stack/*
+                  - arn:aws:cloudformation:*:*:transform/*
               - Effect: Allow
                 Action:
                   - iam:CreateRole
@@ -441,6 +443,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities:
+                  - CAPABILITY_IAM
                   - CAPABILITY_NAMED_IAM
                   - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
@@ -461,6 +464,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities:
+                  - CAPABILITY_IAM
                   - CAPABILITY_NAMED_IAM
                   - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
@@ -488,6 +492,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities:
+                  - CAPABILITY_IAM
                   - CAPABILITY_NAMED_IAM
                   - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
@@ -515,6 +520,7 @@ Resources:
               Configuration:
                 ActionMode: CREATE_UPDATE
                 Capabilities:
+                  - CAPABILITY_IAM
                   - CAPABILITY_NAMED_IAM
                   - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
