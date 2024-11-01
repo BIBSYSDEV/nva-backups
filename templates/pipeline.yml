@@ -169,6 +169,7 @@ Resources:
                   - cloudformation:CreateStack
                   - cloudformation:DeleteStack
                   - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
                   - cloudformation:UpdateStack
                   - cloudformation:CreateChangeSet
                   - cloudformation:DeleteChangeSet
@@ -220,7 +221,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - backup:CreateBackupVault
+                  - backup:CreateLogicallyAirGappedBackupVault
                   - backup:DeleteBackupVault
+                  - backup:DeleteLogicallyAirGappedBackupVault
                   - backup:CreateBackupSelection
                   - backup:DeleteBackupSelection
                   - backup:CreateBackupPlan
