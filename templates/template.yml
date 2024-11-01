@@ -18,7 +18,7 @@ Resources:
     Metadata:
       Comment: !Sub Example bucket for the ${Environment} environment
     Properties:
-      BucketName: !Sub ${AWS::StackName}-example
+      BucketName: !Sub ${AWS::StackName}-example-${AWS::AccountId}-${AWS::Region}
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:

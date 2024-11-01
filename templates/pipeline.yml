@@ -54,7 +54,7 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: !Sub ${AWS::StackName}-logs-${AWS::AccountId}
+      BucketName: !Sub ${AWS::StackName}-logs-${AWS::AccountId}-${AWS::Region}
       ObjectLockConfiguration:
         ObjectLockEnabled: Enabled
         Rule:
@@ -110,7 +110,7 @@ Resources:
     Metadata:
       Comment: This bucket is used by the CI/CD pipeline to store artifacts
     Properties:
-      BucketName: !Sub ${AWS::StackName}-build-artifacts-${AWS::AccountId}
+      BucketName: !Sub ${AWS::StackName}-build-artifacts-${AWS::AccountId}-${AWS::Region}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -149,7 +149,6 @@ Resources:
             Resource:
               - !GetAtt ArtifactBucket.Arn
 
-  # Role used to deploy changes to CloudFormation stacks
   DeployStackRole:
     Type: AWS::IAM::Role
     Properties:
@@ -190,7 +189,6 @@ Resources:
                   - iam:AttachRolePolicy
                   - iam:DetachRolePolicy
                 Resource: arn:aws:iam::*:role/*
-                # arn:aws:iam:::role/*  (old, maybe works?)
         - PolicyName: DeployS3Policy
           PolicyDocument:
             Version: "2012-10-17"
@@ -212,12 +210,10 @@ Resources:
                   - s3:PutBucketWebsite
                   - s3:PutEncryptionConfiguration
                   - s3:PutBucketPublicAccessBlock
-                Resource: 
-                  - "arn:aws:s3:::*"  # For bucket-level operations
-                  - "arn:aws:s3:::*/*" # For object-level operations
+                Resource:
+                  - arn:aws:s3:::* # For bucket-level operations
+                  - arn:aws:s3:::*/* # For object-level operations
 
-  # Role used to manage and orchestrate the CI/CD pipeline.
-  # This passes other roles to relevant AWS services.
   BuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -234,8 +230,6 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-
-              # S3 artifact bucket access
               - Effect: Allow
                 Action:
                   - s3:GetObject
@@ -256,8 +250,7 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
 
-  # Role used by CodeBuild to deploy CloudFormation stacks
-  UpdateS3AndCFNRole:
+  PipelineExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -373,7 +366,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       Name: !Sub ${AWS::StackName}-build-pipeline-${AWS::AccountId}
-      RoleArn: !GetAtt UpdateS3AndCFNRole.Arn
+      RoleArn: !GetAtt PipelineExecutionRole.Arn
       ArtifactStore:
         Type: S3
         Location: !Ref ArtifactBucket
