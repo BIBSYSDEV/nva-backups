@@ -17,6 +17,8 @@ Parameters:
     Type: String
     Default: "750639270376" # FIXME: Account ID of sandbox account, just to test
 
+Transform: AWS::LanguageExtensions
+
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
@@ -85,27 +87,20 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
       ResourceType: backup:backup-vault
-      PolicyTemplate: !Sub |
-        {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "backup:StartCopyJob",
-                "backup:GetBackupVaultAccessPolicy",
-                "backup:GetRecoveryPointRestoreMetadata",
-                "backup:ListRecoveryPointsByBackupVault",
-                "backup:CopyIntoBackupVault"
-              ],
-              "Condition": {
-                "StringEquals": {
-                  "aws:PrincipalAccount": "${OwnerAccountId}"
-                }
-              }
-            }
-          ]
-        }
+      PolicyTemplate:
+        Fn ::ToJsonString:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: ALLOW
+              Action:
+                - backup:StartCopyJob
+                - backup:GetBackupVaultAccessPolicy
+                - backup:GetRecoveryPointRestoreMetadata
+                - backup:ListRecoveryPointsByBackupVault
+                - backup:CopyIntoBackupVault
+              Condition:
+                StringEquals:
+                  aws:PrincipalAccount: !Ref OwnerAccountId
 
 Outputs:
   BucketName:
