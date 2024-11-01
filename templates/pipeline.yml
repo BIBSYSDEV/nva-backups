@@ -440,7 +440,9 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities:
+                  - CAPABILITY_NAMED_IAM
+                  - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
                 TemplatePath: BuildOutput::template.yml
@@ -458,7 +460,9 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities:
+                  - CAPABILITY_NAMED_IAM
+                  - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-dev
                 TemplatePath: BuildOutput::template.yml
@@ -483,7 +487,9 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities:
+                  - CAPABILITY_NAMED_IAM
+                  - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
                 TemplatePath: BuildOutput::template.yml
@@ -508,7 +514,9 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
+                Capabilities:
+                  - CAPABILITY_NAMED_IAM
+                  - CAPABILITY_AUTO_EXPAND
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-prod
                 TemplatePath: BuildOutput::template.yml
