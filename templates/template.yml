@@ -54,12 +54,13 @@ Resources:
           - Sid: AllowCrossAccountBackup
             Effect: Allow
             Principal:
-              AWS: !Sub arn:aws:iam::${OwnerAccountId}:root
+              AWS: !Ref OwnerAccountId
             Action:
-              - backup:StartCopyJob
-              - backup:GetBackupVaultAccessPolicy
-              - backup:GetRecoveryPointRestoreMetadata
-              - backup:ListRecoveryPointsByBackupVault
+
+              # - backup:StartCopyJob
+              # - backup:GetBackupVaultAccessPolicy
+              # - backup:GetRecoveryPointRestoreMetadata
+              # - backup:ListRecoveryPointsByBackupVault
               - backup:CopyIntoBackupVault
             Resource:
               - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault/${AWS::StackName}-*
