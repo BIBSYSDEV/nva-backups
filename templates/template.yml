@@ -75,40 +75,53 @@ Resources:
     Properties:
       AllowExternalPrincipals: false
       Name: !Sub ${AWS::StackName}-backup-vault-share
-
-      # PermissionArns:
-      #   - !GetAtt BackupVaultPermission.Arn
+      PermissionArns:
+        - !GetAtt BackupVaultPermission.Arn
       Principals:
         - !Ref OwnerAccountId
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
 
-        # BackupVaultPermission:
-        #   Type: AWS::RAM::Permission
-        #   Properties:
-        #     Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
-        #     ResourceType: backup:backup-vault
-        #     PolicyTemplate: |
-        #       {
-        #         "Version": "2012-10-17",
-        #         "Statement": [
-        #           {
-        #             "Effect": "ALLOW",
-        #             "Action": [
-        #               "backup:StartCopyJob",
-        #               "backup:GetBackupVaultAccessPolicy",
-        #               "backup:GetRecoveryPointRestoreMetadata",
-        #               "backup:ListRecoveryPointsByBackupVault",
-        #               "backup:CopyIntoBackupVault"
-        #             ],
-        #             "Condition": {
-        #               "StringEquals": {
-        #                 "aws:PrincipalAccount": "750639270376"
-        #               }
-        #             }
-        #           }
-        #         ]
-        #       }
+  BackupVaultPermission:
+    Type: AWS::RAM::Permission
+    Properties:
+      Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
+      ResourceType: backup:backup-vault
+      PolicyTemplate:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: ALLOW
+            Action:
+              - backup:StartCopyJob
+              - backup:GetBackupVaultAccessPolicy
+              - backup:GetRecoveryPointRestoreMetadata
+              - backup:ListRecoveryPointsByBackupVault
+              - backup:CopyIntoBackupVault
+            Condition:
+              StringEquals:
+                aws:PrincipalAccount: !Ref OwnerAccountId
+
+                #     PolicyTemplate: |
+                #       {
+                #         "Version": "2012-10-17",
+                #         "Statement": [
+                #           {
+                #             "Effect": "ALLOW",
+                #             "Action": [
+                #               "backup:StartCopyJob",
+                #               "backup:GetBackupVaultAccessPolicy",
+                #               "backup:GetRecoveryPointRestoreMetadata",
+                #               "backup:ListRecoveryPointsByBackupVault",
+                #               "backup:CopyIntoBackupVault"
+                #             ],
+                #             "Condition": {
+                #               "StringEquals": {
+                #                 "aws:PrincipalAccount": "750639270376"
+                #               }
+                #             }
+                #           }
+                #         ]
+                #       }
 Outputs:
   BucketName:
     Description: Name of the created S3 bucket
