@@ -87,8 +87,8 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
       ResourceType: backup:backup-vault
-      Fn::ToJsonString: 
-        PolicyTemplate:
+      PolicyTemplate:
+        Fn::ToJsonString:
           Version: "2012-10-17"
           Statement:
             - Effect: ALLOW
