@@ -244,6 +244,33 @@ Resources:
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*/*
+        - PolicyName: DeployRAMPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ram:AssociateResourceShare
+                  - ram:CreatePermission
+                  - ram:DeletePermission
+                  - ram:DeleteResourceShare
+                  - ram:DisassociateResourceShare
+                  - ram:GetPermission
+                  - ram:GetResourcePolicies
+                  - ram:GetResourceShareAssociations
+                  - ram:GetResourceShares
+                  - ram:ListPermissions
+                  - ram:ListPermissionAssociations
+                  - ram:ListPrincipals
+                  - ram:ListResources
+                  - ram:ListResourceSharePermissions
+                  - ram:ReplacePermissionAssociations
+                  - ram:TagResource
+                  - ram:UntagResource
+                  - ram:UpdateResourceShare
+                Resource:
+                  - !Sub arn:aws:permission:${AWS::Region}:${AWS::AccountId}:*:*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
 
   BuildServiceRole:
     Type: AWS::IAM::Role
