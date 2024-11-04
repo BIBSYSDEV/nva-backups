@@ -87,19 +87,20 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-backup-vault-permission-${AWS::AccountId}
       ResourceType: backup:backup-vault
-      PolicyTemplate:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: ALLOW
-            Action:
-              - backup:StartCopyJob
-              - backup:GetBackupVaultAccessPolicy
-              - backup:GetRecoveryPointRestoreMetadata
-              - backup:ListRecoveryPointsByBackupVault
-              - backup:CopyIntoBackupVault
-            Condition:
-              StringEquals:
-                aws:PrincipalAccount: !Ref OwnerAccountId
+      Fn::ToJsonString: 
+        PolicyTemplate:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: ALLOW
+              Action:
+                - backup:StartCopyJob
+                - backup:GetBackupVaultAccessPolicy
+                - backup:GetRecoveryPointRestoreMetadata
+                - backup:ListRecoveryPointsByBackupVault
+                - backup:CopyIntoBackupVault
+              Condition:
+                StringEquals:
+                  aws:PrincipalAccount: !Ref OwnerAccountId
 
 Outputs:
   BucketName:
