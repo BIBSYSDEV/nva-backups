@@ -242,6 +242,8 @@ Resources:
                 Resource:
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*/*
 
   BuildServiceRole:
     Type: AWS::IAM::Role
