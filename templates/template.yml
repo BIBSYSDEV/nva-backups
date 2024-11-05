@@ -83,7 +83,7 @@ Resources:
       Name: !Sub ${AWS::StackName}-${Environment}
       ResourceType: backup:backupVault
       PolicyTemplate:
-        Effect: ALLOW
+        Effect: Allow
         Action: backup:CopyIntoBackupVault
 
         # Condition:
