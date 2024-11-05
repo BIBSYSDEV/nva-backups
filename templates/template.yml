@@ -84,7 +84,7 @@ Resources:
       ResourceType: backup:backupVault
       PolicyTemplate:
         Effect: Allow
-        Action: backup:CopyIntoBackupVault
+        Action: CopyIntoBackupVault
 
         # Condition:
         #   StringEquals:
