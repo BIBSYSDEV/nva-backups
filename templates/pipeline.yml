@@ -241,6 +241,7 @@ Resources:
                   - backup:TagResource
                   - backup:UpdateBackupPlan
                   - backup:PutBackupVaultAccessPolicy
+                  - backup:DeleteBackupVaultAccessPolicy
                 Resource:
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
@@ -253,6 +254,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - ram:AssociateResourceShare
+                  - ram:CreateResourceShare
                   - ram:CreatePermission
                   - ram:DeletePermission
                   - ram:DeleteResourceShare
