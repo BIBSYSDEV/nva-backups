@@ -271,8 +271,8 @@ Resources:
                 Resource:
                   - !Sub arn:aws:ram::${AWS::AccountId}:permission/*
                   - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
-                  # - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
 
+                  # - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
   BuildServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -473,10 +473,7 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities:
-                  - CAPABILITY_IAM
-                  - CAPABILITY_NAMED_IAM
-                  - CAPABILITY_AUTO_EXPAND
+                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
                 TemplatePath: BuildOutput::template.yml
@@ -494,7 +491,7 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_AUTO_EXPAND, CAPABILITY_NAMED_IAM, CAPABILITY_IAM
+                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-dev
                 TemplatePath: BuildOutput::template.yml
@@ -519,7 +516,7 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_AUTO_EXPAND, CAPABILITY_NAMED_IAM, CAPABILITY_IAM
+                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
                 TemplatePath: BuildOutput::template.yml
@@ -544,7 +541,7 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_AUTO_EXPAND, CAPABILITY_NAMED_IAM, CAPABILITY_IAM
+                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-prod
                 TemplatePath: BuildOutput::template.yml

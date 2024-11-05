@@ -17,8 +17,6 @@ Parameters:
     Type: String
     Default: "750639270376" # FIXME: Account ID of sandbox account, just to test
 
-Transform: AWS::LanguageExtensions
-
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
