@@ -232,12 +232,15 @@ Resources:
                   - backup:DeleteBackupPlan
                   - backup:DeleteBackupSelection
                   - backup:DeleteBackupVaultAccessPolicy
+                  - backup:DeleteBackupVaultSharingPolicy
                   - backup:DescribeBackupJob
                   - backup:DescribeBackupVault
                   - backup:DescribeRecoveryPoint
                   - backup:GetBackupPlan
                   - backup:GetBackupSelection
                   - backup:GetRecoveryPointRestoreMetadata
+                  - backup:GetBackupVaultAccessPolicy
+                  - backup:GetBackupVaultSharingPolicy
                   - backup:ListBackupPlans
                   - backup:ListBackupSelections
                   - backup:ListBackupVaults
@@ -245,6 +248,7 @@ Resources:
                   - backup:ListRecoveryPointsByBackupVault
                   - backup:ListTags
                   - backup:PutBackupVaultAccessPolicy
+                  - backup:PutBackupVaultSharingPolicy
                   - backup:StartRestoreJob
                   - backup:TagResource
                   - backup:UpdateBackupPlan

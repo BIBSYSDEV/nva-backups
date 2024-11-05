@@ -79,7 +79,7 @@ Resources:
     Type: AWS::RAM::Permission
     Properties:
       Name: !Sub ${AWS::StackName}
-      ResourceType: backup:backupVault
+      ResourceType: backup:BackupVault
       PolicyTemplate:
         Effect: Allow
         Action: backup:DescribeBackupVault
