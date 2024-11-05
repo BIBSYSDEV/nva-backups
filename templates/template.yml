@@ -68,7 +68,7 @@ Resources:
     Type: AWS::RAM::ResourceShare
     Properties:
       AllowExternalPrincipals: false
-      Name: !Sub ${AWS::StackName}-${Environment}
+      Name: !Sub ${AWS::StackName}
       PermissionArns:
         - !GetAtt BackupVaultPermission.Arn
       Principals:
@@ -79,7 +79,7 @@ Resources:
   BackupVaultPermission:
     Type: AWS::RAM::Permission
     Properties:
-      Name: !Sub ${AWS::StackName}-${Environment}
+      Name: !Sub ${AWS::StackName}
       ResourceType: backup:backupVault
       PolicyTemplate:
         Effect: Allow
