@@ -255,11 +255,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - ram:AssociateResourceShare
+                  - ram:AssociateResourceSharePermission
                   - ram:CreateResourceShare
                   - ram:CreatePermission
                   - ram:DeletePermission
                   - ram:DeleteResourceShare
                   - ram:DisassociateResourceShare
+                  - ram:DisassociateResourceSharePermission
                   - ram:GetPermission
                   - ram:GetResourcePolicies
                   - ram:GetResourceShareAssociations
