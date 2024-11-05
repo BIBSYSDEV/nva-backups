@@ -224,12 +224,13 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - backup:CreateBackupPlan
+                  - backup:CreateBackupSelection
                   - backup:CreateBackupVault
                   - backup:CreateLogicallyAirGappedBackupVault
-                  - backup:CreateBackupSelection
-                  - backup:DeleteBackupSelection
-                  - backup:CreateBackupPlan
                   - backup:DeleteBackupPlan
+                  - backup:DeleteBackupSelection
+                  - backup:DeleteBackupVault
                   - backup:DescribeBackupJob
                   - backup:DescribeBackupVault
                   - backup:GetBackupPlan

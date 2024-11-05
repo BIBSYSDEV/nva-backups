@@ -49,16 +49,15 @@ Resources:
       AccessPolicy:
         Version: "2012-10-17"
         Statement:
-          - Sid: AllowCrossAccountBackup
+          - Sid: AllowBackupCopyFromAccount
             Effect: Allow
             Principal:
               AWS: !Ref OwnerAccountId
             Action:
               - backup:CopyIntoBackupVault
             Resource:
-              - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault/${AWS::StackName}-*
+              - !Sub arn:aws:backup:${AWS::Region}:${OwnerAccountId}:backup-vault/*
 
-              # - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point/*
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault
       EncryptionKeyArn: STRING
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
