@@ -184,7 +184,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - iam:CreateRole
+                  - iam:CreateServiceLinkedRole
                   - iam:DeleteRole
+                  - iam:DeleteServiceLinkedRole
                   - iam:PutRolePolicy
                   - iam:DeleteRolePolicy
                   - iam:GetRole
