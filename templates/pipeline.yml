@@ -228,21 +228,26 @@ Resources:
                   - backup:CreateBackupSelection
                   - backup:CreateBackupVault
                   - backup:CreateLogicallyAirGappedBackupVault
+                  - backup:DeleteBackupVault
                   - backup:DeleteBackupPlan
                   - backup:DeleteBackupSelection
-                  - backup:DeleteBackupVault
+                  - backup:DeleteBackupVaultAccessPolicy
                   - backup:DescribeBackupJob
                   - backup:DescribeBackupVault
+                  - backup:DescribeRecoveryPoint
                   - backup:GetBackupPlan
                   - backup:GetBackupSelection
+                  - backup:GetRecoveryPointRestoreMetadata
                   - backup:ListBackupPlans
                   - backup:ListBackupSelections
                   - backup:ListBackupVaults
+                  - backup:ListProtectedResourcesByBackupVault
+                  - backup:ListRecoveryPointsByBackupVault
                   - backup:ListTags
+                  - backup:PutBackupVaultAccessPolicy
+                  - backup:StartRestoreJob
                   - backup:TagResource
                   - backup:UpdateBackupPlan
-                  - backup:PutBackupVaultAccessPolicy
-                  - backup:DeleteBackupVaultAccessPolicy
                 Resource:
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
                   - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
@@ -256,8 +261,8 @@ Resources:
                 Action:
                   - ram:AssociateResourceShare
                   - ram:AssociateResourceSharePermission
-                  - ram:CreateResourceShare
                   - ram:CreatePermission
+                  - ram:CreateResourceShare
                   - ram:DeletePermission
                   - ram:DeleteResourceShare
                   - ram:DisassociateResourceShare
@@ -265,12 +270,16 @@ Resources:
                   - ram:GetPermission
                   - ram:GetResourcePolicies
                   - ram:GetResourceShareAssociations
+                  - ram:GetResourceShareInvitations
                   - ram:GetResourceShares
-                  - ram:ListPermissions
+                  - ram:ListPendingInvitationResources
                   - ram:ListPermissionAssociations
+                  - ram:ListPermissions
                   - ram:ListPrincipals
+                  - ram:ListReplacePermissionAssociationsWork
                   - ram:ListResources
                   - ram:ListResourceSharePermissions
+                  - ram:ListResourceTypes
                   - ram:ReplacePermissionAssociations
                   - ram:TagResource
                   - ram:UntagResource
