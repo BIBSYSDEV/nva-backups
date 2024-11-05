@@ -57,7 +57,6 @@ Resources:
               - backup:CopyIntoBackupVault
             Resource:
               - !Sub arn:aws:backup:${AWS::Region}:${OwnerAccountId}:backup-vault/*
-
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault
       EncryptionKeyArn: STRING
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
