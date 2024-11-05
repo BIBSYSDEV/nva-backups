@@ -270,9 +270,9 @@ Resources:
                   - ram:UpdateResourceShare
                 Resource:
                   - !Sub arn:aws:ram::${AWS::AccountId}:permission/*
+                  - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:permission/*
                   - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
 
-                  # - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
   BuildServiceRole:
     Type: AWS::IAM::Role
     Properties:

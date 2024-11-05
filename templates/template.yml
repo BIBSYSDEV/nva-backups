@@ -82,15 +82,22 @@ Resources:
     Properties:
       Name: !Sub ${AWS::StackName}-${Environment}
       ResourceType: backup:backup-vault
-      PolicyTemplate:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: ALLOW
-            Action:
-              - backup:CopyIntoBackupVault
-            Condition:
-              StringEquals:
-                aws:PrincipalAccount: !Ref OwnerAccountId
+      PolicyTemplate: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "ALLOW",
+              "Action": [
+                "backup:CopyIntoBackupVault"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "${OwnerAccountId}"
+                }
+              }
+            }
+          ]
 
 Outputs:
   BucketName:
