@@ -88,9 +88,9 @@ Resources:
           - Effect: ALLOW
             Action:
               - backup:CopyIntoBackupVault
-            Condition:
-              StringEquals:
-                aws:PrincipalAccount: !Ref OwnerAccountId
+            # Condition:
+            #   StringEquals:
+            #     aws:PrincipalAccount: !Ref OwnerAccountId
       # PolicyTemplate: !Sub |
       #   {
       #     "Version": "2012-10-17",
