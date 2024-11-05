@@ -83,11 +83,10 @@ Resources:
       Name: !Sub ${AWS::StackName}-${Environment}
       ResourceType: backup:backupVault
       PolicyTemplate:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: ALLOW
-            Action:
-              - backup:CopyIntoBackupVault
+        - Effect: ALLOW
+        - Action:
+            - backup:CopyIntoBackupVault
+
             # Condition:
             #   StringEquals:
             #     aws:PrincipalAccount: !Ref OwnerAccountId
@@ -107,7 +106,6 @@ Resources:
       #         }
       #       }
       #     ]
-
 Outputs:
   BucketName:
     Description: Name of the created S3 bucket
