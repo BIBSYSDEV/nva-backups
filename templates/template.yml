@@ -67,22 +67,23 @@ Resources:
     Properties:
       AllowExternalPrincipals: false
       Name: !Sub ${AWS::StackName}
-      PermissionArns:
-        - !GetAtt BackupVaultPermission.Arn
-        - arn:aws:iam::aws:policy/AWSBackupFullAccess
+
+      # PermissionArns:
+      #   - !GetAtt BackupVaultPermission.Arn
+      #   - arn:aws:iam::aws:policy/AWSBackupFullAccess
       Principals:
         - !Ref OwnerAccountId
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
 
-  BackupVaultPermission:
-    Type: AWS::RAM::Permission
-    Properties:
-      Name: !Sub ${AWS::StackName}
-      ResourceType: backup:BackupVault
-      PolicyTemplate:
-        Effect: Allow
-        Action: backup:DescribeBackupVault
+        # BackupVaultPermission:
+        #   Type: AWS::RAM::Permission
+        #   Properties:
+        #     Name: !Sub ${AWS::StackName}
+        #     ResourceType: backup:BackupVault
+        #     PolicyTemplate:
+        #       Effect: Allow
+        #       Action: backup:DescribeBackupVault
 
         # Condition:
         #   StringEquals:
