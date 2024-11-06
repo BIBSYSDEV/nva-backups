@@ -35,7 +35,7 @@ Resources:
               - !Sub arn:aws:backup:${AWS::Region}:${OwnerAccountId}:recovery-point/*
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault2 # FIXME: Unique name
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
-      MinRetentionDays: 2
+      MinRetentionDays: 7
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
   BackupVaultShare:
