@@ -292,7 +292,7 @@ Resources:
                   - !Sub arn:aws:ram::${AWS::AccountId}:permission/*
                   - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:permission/*
                   - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
-                  - !Sub arn:aws:iam::aws:policy/*
+                  - arn:aws:iam::aws:policy/*
 
   BuildServiceRole:
     Type: AWS::IAM::Role
