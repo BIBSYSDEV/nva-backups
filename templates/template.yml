@@ -3,19 +3,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: This stack creates a logically-air gapped backup vault and supporting resources, intended to be used for storing copies of backups for all services in a given environment.
 
 Parameters:
-  Environment:
-    Description: Deployment environment
-    Type: String
-    AllowedValues:
-      - sandbox
-      - dev
-      - test
-      - prod
-
-  OwnerAccountId:
+  TargetAccountId:
     Description: AWS Account ID of the account that can write to the backup vault
     Type: String
-    Default: "750639270376" # FIXME: Account ID of sandbox account, just to test
+    Default: "12345"
 
 Resources:
   BackupVault:
@@ -27,12 +18,10 @@ Resources:
           - Sid: AllowBackupCopyFromAccount
             Effect: Allow
             Principal:
-              AWS: !Ref OwnerAccountId
+              AWS: !Ref TargetAccountId
             Action:
               - backup:CopyIntoBackupVault
-            Resource:
-              - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault/*
-              - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point/*
+            Resource: '*'
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault2 # FIXME: Unique name
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
       MinRetentionDays: 7
@@ -44,11 +33,6 @@ Resources:
       AllowExternalPrincipals: false
       Name: !Sub ${AWS::StackName}
       Principals:
-        - !Ref OwnerAccountId
+        - !Ref TargetAccountId
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
-
-Outputs:
-  Tmp:
-    Description: Name of the environment
-    Value: !Ref Environment

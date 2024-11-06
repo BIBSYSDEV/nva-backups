@@ -17,8 +17,31 @@ Metadata:
           default: CodeBuild configuration
         Parameters:
           - CodeBuildImage
+      - Label:
+          default: IDs of AWS accounts that should get access to a backup vault
+        Parameters:
+          - AccountIdSandbox
+          - AccountIdDev
+          - AccountIdTest
+          - AccountIdProd
 
 Parameters:
+  AccountIdSandbox:
+    Description: AWS Account ID of the sandbox account
+    Type: String
+
+  AccountIdDev:
+    Description: AWS Account ID of the dev account
+    Type: String
+
+  AccountIdTest:
+    Description: AWS Account ID of the test account
+    Type: String
+
+  AccountIdProd:
+    Description: AWS Account ID of the prod account
+    Type: String
+
   CodeBuildImage:
     Type: String
     Default: aws/codebuild/standard:7.0
@@ -498,7 +521,10 @@ Resources:
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
                 TemplatePath: BuildOutput::template.yml
-                ParameterOverrides: '{"Environment": "sandbox"}'
+                ParameterOverrides: !Sub |
+                  {
+                  "TargetAccountId": "${AccountIdSandbox}"
+                  }
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1
@@ -516,7 +542,10 @@ Resources:
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-dev
                 TemplatePath: BuildOutput::template.yml
-                ParameterOverrides: '{"Environment": "dev"}'
+                ParameterOverrides: !Sub |
+                  {
+                  "TargetAccountId": "${AccountIdDev}"
+                  }
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1
@@ -541,7 +570,10 @@ Resources:
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
                 TemplatePath: BuildOutput::template.yml
-                ParameterOverrides: '{"Environment": "test"}'
+                ParameterOverrides: !Sub |
+                  {
+                  "TargetAccountId": "${AccountIdTest}"
+                  }
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
@@ -566,7 +598,10 @@ Resources:
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-prod
                 TemplatePath: BuildOutput::template.yml
-                ParameterOverrides: '{"Environment": "prod"}'
+                ParameterOverrides: !Sub |
+                  {
+                  "TargetAccountId": "${AccountIdProd}"
+                  }
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
