@@ -18,31 +18,6 @@ Parameters:
     Default: "750639270376" # FIXME: Account ID of sandbox account, just to test
 
 Resources:
-  DataBucket:
-    Type: AWS::S3::Bucket
-    Metadata:
-      Comment: !Sub Example bucket for the ${Environment} environment
-    Properties:
-      BucketName: !Sub ${AWS::StackName}-example-${AWS::AccountId}-${AWS::Region}
-      VersioningConfiguration:
-        Status: Enabled
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      LifecycleConfiguration:
-        Rules:
-          - Id: AutoArchive
-            Status: Enabled
-            Transitions:
-              - TransitionInDays: 90
-                StorageClass: INTELLIGENT_TIERING
-
   BackupVault:
     Type: AWS::Backup::LogicallyAirGappedBackupVault
     Properties:
@@ -57,9 +32,10 @@ Resources:
               - backup:CopyIntoBackupVault
             Resource:
               - !Sub arn:aws:backup:${AWS::Region}:${OwnerAccountId}:backup-vault/*
+              - !Sub arn:aws:backup:${AWS::Region}:${OwnerAccountId}:recovery-point/*
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
-      MinRetentionDays: 7
+      MinRetentionDays: 2
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
   BackupVaultShare:
@@ -67,48 +43,7 @@ Resources:
     Properties:
       AllowExternalPrincipals: false
       Name: !Sub ${AWS::StackName}
-
-      # PermissionArns:
-      #   - !GetAtt BackupVaultPermission.Arn
-
       Principals:
         - !Ref OwnerAccountId
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
-
-        # BackupVaultPermission:
-        #   Type: AWS::RAM::Permission
-        #   Properties:
-        #     Name: !Sub ${AWS::StackName}
-        #     ResourceType: backup:BackupVault
-        #     PolicyTemplate:
-        #       Effect: Allow
-        #       Action: backup:DescribeBackupVault
-
-        # Condition:
-        #   StringEquals:
-        #     aws:PrincipalAccount: !Ref OwnerAccountId
-      # PolicyTemplate: !Sub |
-      #   {
-      #     "Version": "2012-10-17",
-      #     "Statement": [
-      #       {
-      #         "Effect": "ALLOW",
-      #         "Action": [
-      #           "backup:CopyIntoBackupVault"
-      #         ],
-      #         "Condition": {
-      #           "StringEquals": {
-      #             "aws:PrincipalAccount": "${OwnerAccountId}"
-      #           }
-      #         }
-      #       }
-      #     ]
-Outputs:
-  BucketName:
-    Description: Name of the created S3 bucket
-    Value: !Ref DataBucket
-
-  BucketArn:
-    Description: ARN of the created S3 bucket
-    Value: !GetAtt DataBucket.Arn
