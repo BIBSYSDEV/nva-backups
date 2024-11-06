@@ -47,3 +47,8 @@ Resources:
         - !Ref OwnerAccountId
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
+
+Outputs:
+  Tmp:
+    Description: Name of the environment
+    Value: !Ref Environment
