@@ -78,14 +78,18 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
       BucketName: !Sub ${AWS::StackName}-logs-${AWS::AccountId}-${AWS::Region}
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireLogs
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 30
       ObjectLockConfiguration:
         ObjectLockEnabled: Enabled
         Rule:
           DefaultRetention:
-
-            # TODO: Consider making this stricter when the template is finalized
-            Mode: GOVERNANCE # Could use COMPLIANCE
-            Days: 14 # Could replace this with 'Years: 1'
+            Mode: GOVERNANCE
+            Days: 14
       ObjectLockEnabled: true
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
@@ -138,6 +142,12 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 7
       LoggingConfiguration:
         DestinationBucketName: !Ref LogBucket
       PublicAccessBlockConfiguration:
@@ -524,7 +534,8 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                   "VaultWriterAccountId": "${AccountIdSandbox}",
-                  "VaultReaderAccountIds": "${AccountIdDev}"
+                  "VaultReaderAccountIds": "${AccountIdDev}",
+                  "VaultMaxRetentionDays": 14
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -546,7 +557,8 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                   "VaultWriterAccountId": "${AccountIdDev}",
-                  "VaultReaderAccountIds": []
+                  "VaultReaderAccountIds": "${AccountIdSandbox}",
+                  "VaultMaxRetentionDays": 14
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -574,7 +586,9 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdTest}"
+                  "VaultWriterAccountId": "${AccountIdTest}",
+                  "VaultReaderAccountIds": "${AccountIdSandbox}, ${AccountIdDev}"
+                  "VaultMaxRetentionDays": 365
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -602,7 +616,8 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdProd}"
+                  "VaultWriterAccountId": "${AccountIdProd}",
+                  "VaultMaxRetentionDays": 365
                   }
               InputArtifacts:
                 - Name: BuildOutput

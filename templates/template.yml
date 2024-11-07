@@ -12,6 +12,16 @@ Parameters:
     Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
     Type: List<String>
 
+  VaultMinRetentionDays:
+    Description: Minimum number of days to retain backups in the vault.
+    Type: Number
+    Default: 7
+
+  VaultMaxRetentionDays:
+    Description: Maximum number of days to retain backups in the vault.
+    Type: Number
+    Default: 365
+
 Resources:
   BackupVault:
     DeletionPolicy: Retain
@@ -21,7 +31,7 @@ Resources:
       AccessPolicy:
         Version: "2012-10-17"
         Statement:
-          - Sid: AllowBackupCopyFromAccount
+          - Sid: AllowAccessFromVaultWriter
             Effect: Allow
             Principal:
               AWS: !Ref VaultWriterAccountId
@@ -29,21 +39,20 @@ Resources:
               - backup:CopyIntoBackupVault
             Resource: '*'
 
-
-          # FIXME: This policy is too permissive and duplicates the above policy.
+          # Note: This policy is too permissive and duplicates the above policy.
           # This is because of a limitation in allowed actions for cross-account sharing,
           # which only allows the CopyIntoBackupVault action to be shared with other accounts.
           # As this vault type does not allow deletion of backups, this is acceptable for now.
-          - Sid: AllowCopyFromBackupVaultToReadAccounts
+          - Sid: AllowAccessFromVaultReaders
             Effect: Allow
             Principal:
               AWS: !Ref VaultReaderAccountIds
             Action:
               - backup:CopyIntoBackupVault
             Resource: '*'
-      BackupVaultName: !Sub ${AWS::StackName}-backup-vault2 # FIXME: Unique name
-      MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
-      MinRetentionDays: 7
+      BackupVaultName: !Sub ${AWS::StackName}-vault
+      MaxRetentionDays: !Ref VaultMaxRetentionDays
+      MinRetentionDays: !Ref VaultMinRetentionDays
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
   BackupVaultShareWriteAccount:
