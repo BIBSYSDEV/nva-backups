@@ -587,7 +587,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                   "VaultWriterAccountId": "${AccountIdTest}",
-                  "VaultReaderAccountIds": "${AccountIdSandbox},${AccountIdDev}"
+                  "VaultReaderAccountIds": "${AccountIdSandbox},${AccountIdDev}",
                   "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
