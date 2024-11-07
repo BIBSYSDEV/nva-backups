@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: This stack creates a logically-air gapped backup vault and supporting resources, intended to be used for storing copies of backups for all services in a given environment.
+Description: This stack creates a backup vault that is shared with other accounts, allowing one source account to copy backups into the vault and other accounts to copy backups out of the vault. Backups stored in this vault cannot be deleted manually and are kept until their retention period expires.
 
 Parameters:
   VaultWriterAccountId:
@@ -11,7 +11,6 @@ Parameters:
   VaultReaderAccountIds:
     Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
     Type: List<String>
-    Default: AWS::NoValue
 
 Resources:
   BackupVault:
