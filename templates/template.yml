@@ -11,6 +11,7 @@ Parameters:
   VaultReaderAccountIds:
     Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
     Type: CommaDelimitedList
+    Default: ""
 
   VaultMinRetentionDays:
     Description: Minimum number of days to retain backups in the vault.
