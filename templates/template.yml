@@ -28,12 +28,18 @@ Resources:
             Action:
               - backup:CopyIntoBackupVault
             Resource: '*'
+
+
+          # FIXME: This policy is too permissive and duplicates the above policy.
+          # This is because of a limitation in allowed actions for cross-account sharing,
+          # which only allows the CopyIntoBackupVault action to be shared with other accounts.
+          # As this vault type does not allow deletion of backups, this is acceptable for now.
           - Sid: AllowCopyFromBackupVaultToReadAccounts
             Effect: Allow
             Principal:
               AWS: !Ref VaultReaderAccountIds
             Action:
-              - backup:CopyFromBackupVault
+              - backup:CopyIntoBackupVault
             Resource: '*'
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault2 # FIXME: Unique name
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
