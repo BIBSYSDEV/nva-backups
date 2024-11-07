@@ -533,8 +533,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdSandbox}",
-                  "VaultReaderAccountIds": "${AccountIdDev}",
+                  "AllowedAccountIds": "${AccountIdSandbox},${AccountIdDev}",
                   "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
@@ -556,8 +555,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdDev}",
-                  "VaultReaderAccountIds": "${AccountIdSandbox},${AccountIdTest}",
+                  "AllowedAccountIds": "${AccountIdDev},${AccountIdSandbox}",
                   "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
@@ -586,8 +584,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdTest}",
-                  "VaultReaderAccountIds": "${AccountIdSandbox},${AccountIdDev}",
+                  "AllowedAccountIds": "${AccountIdTest},${AccountIdSandbox}",
                   "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
@@ -616,7 +613,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "VaultWriterAccountId": "${AccountIdProd}",
+                  "AllowedAccountIds": "${AccountIdProd},${AccountIdTest}",
                   "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:

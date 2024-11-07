@@ -1,17 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: This stack creates a backup vault that is shared with other accounts, allowing one source account to copy backups into the vault and other accounts to copy backups out of the vault. Backups stored in this vault cannot be deleted manually and are kept until their retention period expires.
+Description: This stack creates a backup vault shared with other accounts. All accounts have both read and write access to the vault, as this is the only way to share backups across accounts (due to limitations in the AWS Backup service). The vault is logically air-gapped, meaning that backups stored in this vault cannot be deleted manually and are kept until their retention period expires. The vault is intended to be written to by one account, but can be read by multiple accounts (for example, to restore a backup into a different environment for testing).
 
 Parameters:
-  VaultWriterAccountId:
-    Description: AWS Account ID of an account that should be allowed to copy backups into this vault.
-    Type: String
-    Default: ""
-
-  VaultReaderAccountIds:
-    Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
+  AllowedAccountIds:
+    Description: AWS Account IDs of all accounts that should be allowed to access this vault.
     Type: CommaDelimitedList
-    Default: ""
 
   VaultMinRetentionDays:
     Description: Minimum number of days to retain backups in the vault.
@@ -34,45 +28,23 @@ Resources:
       AccessPolicy:
         Version: "2012-10-17"
         Statement:
-          - Sid: AllowAccessFromVaultWriter
+          - Sid: AllowVaultAccess
             Effect: Allow
             Principal:
-              AWS: !Ref VaultWriterAccountId
+              AWS: !Ref AllowedAccountIds
             Action:
-              - backup:CopyIntoBackupVault
-            Resource: '*'
-
-          # Note: This policy is too permissive and duplicates the above policy.
-          # This is because of a limitation in allowed actions for cross-account sharing,
-          # which only allows the CopyIntoBackupVault action to be shared with other accounts.
-          # As this vault type does not allow deletion of backups, this is acceptable for now.
-          - Sid: AllowAccessFromVaultReaders
-            Effect: Allow
-            Principal:
-              AWS: !Ref VaultReaderAccountIds
-            Action:
-              - backup:CopyIntoBackupVault
+              - backup:CopyIntoBackupVault # Note: This is the only action allowed here due to limitations in cross-account sharing.
             Resource: '*'
       BackupVaultName: !Sub ${AWS::StackName}-vault
       MaxRetentionDays: !Ref VaultMaxRetentionDays
       MinRetentionDays: !Ref VaultMinRetentionDays
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
-  BackupVaultShareWriteAccount:
+  BackupVaultShare:
     Type: AWS::RAM::ResourceShare
     Properties:
       AllowExternalPrincipals: false
-      Name: !Sub ${AWS::StackName}-Writer
-      Principals:
-        - !Ref VaultWriterAccountId
-      ResourceArns:
-        - !GetAtt BackupVault.BackupVaultArn
-
-  BackupVaultShareReadAccounts:
-    Type: AWS::RAM::ResourceShare
-    Properties:
-      AllowExternalPrincipals: false
-      Name: !Sub ${AWS::StackName}-Readers
-      Principals: !Ref VaultReaderAccountIds
+      Name: !Sub ${AWS::StackName}-VaultShare
+      Principals: !Ref AllowedAccountIds
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
