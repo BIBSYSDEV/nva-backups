@@ -535,7 +535,7 @@ Resources:
                   {
                   "VaultWriterAccountId": "${AccountIdSandbox}",
                   "VaultReaderAccountIds": "${AccountIdDev}",
-                  "VaultMaxRetentionDays": 14
+                  "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -558,7 +558,7 @@ Resources:
                   {
                   "VaultWriterAccountId": "${AccountIdDev}",
                   "VaultReaderAccountIds": "${AccountIdSandbox}",
-                  "VaultMaxRetentionDays": 14
+                  "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -588,7 +588,7 @@ Resources:
                   {
                   "VaultWriterAccountId": "${AccountIdTest}",
                   "VaultReaderAccountIds": "${AccountIdSandbox}, ${AccountIdDev}"
-                  "VaultMaxRetentionDays": 365
+                  "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -617,7 +617,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                   "VaultWriterAccountId": "${AccountIdProd}",
-                  "VaultMaxRetentionDays": 365
+                  "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
                 - Name: BuildOutput
