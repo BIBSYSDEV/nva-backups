@@ -524,7 +524,7 @@ Resources:
                 ParameterOverrides: !Sub |
                   {
                   "VaultWriterAccountId": "${AccountIdSandbox}",
-                  "VaultReaderAccountIds": ["${AccountIdDev}"]
+                  "VaultReaderAccountIds": "${AccountIdDev}"
                   }
               InputArtifacts:
                 - Name: BuildOutput
