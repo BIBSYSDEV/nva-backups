@@ -10,17 +10,19 @@ Parameters:
 
   VaultReaderAccountIds:
     Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
-    Type: List<String>
+    Type: CommaDelimitedList
 
   VaultMinRetentionDays:
     Description: Minimum number of days to retain backups in the vault.
     Type: Number
     Default: 7
+    MinValue: 7
 
   VaultMaxRetentionDays:
     Description: Maximum number of days to retain backups in the vault.
     Type: Number
     Default: 365
+    MinValue: 14
 
 Resources:
   BackupVault:
