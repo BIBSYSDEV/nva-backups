@@ -18,7 +18,7 @@ Metadata:
         Parameters:
           - CodeBuildImage
       - Label:
-          default: IDs of AWS accounts that should get access to a backup vault
+          default: AWS account IDs of the environments in use
         Parameters:
           - AccountIdSandbox
           - AccountIdDev
@@ -523,7 +523,8 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "TargetAccountId": "${AccountIdSandbox}"
+                  "VaultWriterAccountId": "${AccountIdSandbox}",
+                  "VaultReaderAccountIds": ["${AccountIdDev}"]
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -544,7 +545,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "TargetAccountId": "${AccountIdDev}"
+                  "VaultWriterAccountId": "${AccountIdDev}",
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -572,7 +573,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "TargetAccountId": "${AccountIdTest}"
+                  "VaultWriterAccountId": "${AccountIdTest}"
                   }
               InputArtifacts:
                 - Name: BuildOutput
@@ -600,7 +601,7 @@ Resources:
                 TemplatePath: BuildOutput::template.yml
                 ParameterOverrides: !Sub |
                   {
-                  "TargetAccountId": "${AccountIdProd}"
+                  "VaultWriterAccountId": "${AccountIdProd}"
                   }
               InputArtifacts:
                 - Name: BuildOutput

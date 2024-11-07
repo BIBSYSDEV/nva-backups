@@ -3,13 +3,20 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: This stack creates a logically-air gapped backup vault and supporting resources, intended to be used for storing copies of backups for all services in a given environment.
 
 Parameters:
-  TargetAccountId:
-    Description: AWS Account ID of the account that can write to the backup vault
+  VaultWriterAccountId:
+    Description: AWS Account ID of an account that should be allowed to copy backups into this vault.
     Type: String
-    Default: "12345"
+    Default: ""
+
+  VaultReaderAccountIds:
+    Description: AWS Account IDs of accounts that should be allowed to copy backups from this vault.
+    Type: List<String>
+    Default: AWS::NoValue
 
 Resources:
   BackupVault:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: AWS::Backup::LogicallyAirGappedBackupVault
     Properties:
       AccessPolicy:
@@ -18,21 +25,37 @@ Resources:
           - Sid: AllowBackupCopyFromAccount
             Effect: Allow
             Principal:
-              AWS: !Ref TargetAccountId
+              AWS: !Ref VaultWriterAccountId
             Action:
               - backup:CopyIntoBackupVault
+            Resource: '*'
+          - Sid: AllowCopyFromBackupVaultToReadAccounts
+            Effect: Allow
+            Principal:
+              AWS: !Ref VaultReaderAccountIds
+            Action:
+              - backup:CopyFromBackupVault
             Resource: '*'
       BackupVaultName: !Sub ${AWS::StackName}-backup-vault2 # FIXME: Unique name
       MaxRetentionDays: 14 # FIXME: Low value for testing, should be a year or more
       MinRetentionDays: 7
       VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
 
-  BackupVaultShare:
+  BackupVaultShareWriteAccount:
     Type: AWS::RAM::ResourceShare
     Properties:
       AllowExternalPrincipals: false
-      Name: !Sub ${AWS::StackName}
+      Name: !Sub ${AWS::StackName}-Writer
       Principals:
-        - !Ref TargetAccountId
+        - !Ref VaultWriterAccountId
+      ResourceArns:
+        - !GetAtt BackupVault.BackupVaultArn
+
+  BackupVaultShareReadAccounts:
+    Type: AWS::RAM::ResourceShare
+    Properties:
+      AllowExternalPrincipals: false
+      Name: !Sub ${AWS::StackName}-Readers
+      Principals: !Ref VaultReaderAccountIds
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
