@@ -2,11 +2,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description: Environment-specific stack for cross-account backups
 
-# This stack creates a backup vault shared with other accounts. 
-# All accounts have both read and write access to the vault, as this is the only way to share backups across accounts (due to limitations in the AWS Backup service). 
-# The vault is logically air-gapped, meaning that backups stored in this vault cannot be deleted manually and are kept until their retention period expires. 
+# This stack creates a backup vault shared with other accounts.
+# All accounts have both read and write access to the vault, as this is the only way to share backups across accounts (due to limitations in the AWS Backup service).
+# The vault is logically air-gapped, meaning that backups stored in this vault cannot be deleted manually and are kept until their retention period expires.
 # The vault is intended to be written to by one account, but can be read by multiple accounts (for example, to restore a backup into a different environment for testing).
-
 Parameters:
   AllowedAccountIds:
     Description: AWS Account IDs of all accounts that should be allowed to access this vault.
@@ -53,3 +52,12 @@ Resources:
       Principals: !Ref AllowedAccountIds
       ResourceArns:
         - !GetAtt BackupVault.BackupVaultArn
+
+Outputs:
+  BackupVaultName:
+    Description: Name of the backup vault.
+    Value: !Ref BackupVault
+
+  BackupVaultArn:
+    Description: ARN of the backup vault.
+    Value: !GetAtt BackupVault.BackupVaultArn

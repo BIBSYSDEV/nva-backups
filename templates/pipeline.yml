@@ -5,7 +5,6 @@ Description: Root stack for cross-account backups
 # Base infrastructure template for cross-account backups. 
 # This deploys a CI/CD pipeline and required roles to deploy further resources automatically. 
 # This template must be deployed manually.
-
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -627,7 +626,3 @@ Outputs:
   PipelineURL:
     Description: CodePipeline URL
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
-
-  ArtifactBucketName:
-    Description: S3 Bucket for build artifacts
-    Value: !Ref ArtifactBucket
