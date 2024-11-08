@@ -8,7 +8,6 @@ rain fmt ./templates/template.yml -w
 # Check all template files
 echo "Running cfn-lint..."
 cfn-lint ./templates/**/*.yml
-#cfn-lint ./template.yml
 
 echo "Running cfn-nag..."
 cfn_nag_scan --input-path ./templates
