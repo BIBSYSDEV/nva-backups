@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: |
-  Base infrastructure template for cross-account backups. This deploys a CI/CD pipeline and required roles to deploy further resources automatically. This template must be deployed manually.
+Description: Root stack for cross-account backups
+
+# Base infrastructure template for cross-account backups. 
+# This deploys a CI/CD pipeline and required roles to deploy further resources automatically. 
+# This template must be deployed manually.
 
 Metadata:
   AWS::CloudFormation::Interface:
