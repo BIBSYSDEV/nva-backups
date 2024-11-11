@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Environment-specific stack for cross-account backups
+
+# This stack creates a backup vault shared with other accounts.
+# All accounts have both read and write access to the vault, as this is the only way to share backups across accounts (due to limitations in the AWS Backup service).
+# The vault is logically air-gapped, meaning that backups stored in this vault cannot be deleted manually and are kept until their retention period expires.
+# The vault is intended to be written to by one account, but can be read by multiple accounts (for example, to restore a backup into a different environment for testing).
+Parameters:
+  AllowedAccountIds:
+    Description: AWS Account IDs of all accounts that should be allowed to access this vault.
+    Type: CommaDelimitedList
+
+  VaultMinRetentionDays:
+    Description: Minimum number of days to retain backups in the vault.
+    Type: Number
+    Default: 7
+    MinValue: 7
+
+  VaultMaxRetentionDays:
+    Description: Maximum number of days to retain backups in the vault.
+    Type: Number
+    Default: 365
+    MinValue: 14
+
+Resources:
+  BackupVault:
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: AWS::Backup::LogicallyAirGappedBackupVault
+    Properties:
+      AccessPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowVaultAccess
+            Effect: Allow
+            Principal:
+              AWS: !Ref AllowedAccountIds
+            Action:
+              - backup:CopyIntoBackupVault # Note: This is the only action allowed here due to limitations in cross-account sharing.
+            Resource: '*'
+      BackupVaultName: !Sub ${AWS::StackName}-vault
+      MaxRetentionDays: !Ref VaultMaxRetentionDays
+      MinRetentionDays: !Ref VaultMinRetentionDays
+      VaultType: LOGICALLY_AIR_GAPPED_BACKUP_VAULT
+
+  BackupVaultShare:
+    Type: AWS::RAM::ResourceShare
+    Properties:
+      AllowExternalPrincipals: false
+      Name: !Sub ${AWS::StackName}-VaultShare
+      Principals: !Ref AllowedAccountIds
+      ResourceArns:
+        - !GetAtt BackupVault.BackupVaultArn
+
+Outputs:
+  BackupVaultName:
+    Description: Name of the backup vault.
+    Value: !Ref BackupVault
+
+  BackupVaultArn:
+    Description: ARN of the backup vault.
+    Value: !GetAtt BackupVault.BackupVaultArn

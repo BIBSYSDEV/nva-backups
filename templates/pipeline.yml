@@ -1,0 +1,628 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Root stack for cross-account backups
+
+# Base infrastructure template for cross-account backups. 
+# This deploys a CI/CD pipeline and required roles to deploy further resources automatically. 
+# This template must be deployed manually.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: GitHub configuration
+        Parameters:
+          - GitHubOwner
+          - GitHubRepo
+          - GitHubBranch
+          - GitHubConnectionArn
+      - Label:
+          default: CodeBuild configuration
+        Parameters:
+          - CodeBuildImage
+      - Label:
+          default: AWS account IDs of the environments in use
+        Parameters:
+          - AccountIdSandbox
+          - AccountIdDev
+          - AccountIdTest
+          - AccountIdProd
+
+Parameters:
+  AccountIdSandbox:
+    Description: AWS Account ID of the sandbox account
+    Type: String
+
+  AccountIdDev:
+    Description: AWS Account ID of the dev account
+    Type: String
+
+  AccountIdTest:
+    Description: AWS Account ID of the test account
+    Type: String
+
+  AccountIdProd:
+    Description: AWS Account ID of the prod account
+    Type: String
+
+  CodeBuildImage:
+    Type: String
+    Default: aws/codebuild/standard:7.0
+
+  GitHubOwner:
+    Description: GitHub repository owner
+    Type: String
+
+  GitHubRepo:
+    Description: GitHub repository name
+    Type: String
+
+  GitHubBranch:
+    Description: GitHub branch name
+    Type: String
+    Default: main
+
+  GitHubConnectionArn:
+    Description: GitHubConnection ARN (this must be created manually)
+    Type: String
+
+Resources:
+  LogBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      Comment: This bucket stores access logs for other buckets
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: Logging access to the log bucket is not required and would lead to an endless chain of log buckets. Should we have buckets all the way down?
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      BucketName: !Sub ${AWS::StackName}-logs-${AWS::AccountId}-${AWS::Region}
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireLogs
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 30
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: GOVERNANCE
+            Days: 14
+      ObjectLockEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  LogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LogBucket
+      PolicyDocument:
+        Statement:
+
+          # Enforce access over HTTPS
+          - Action: s3:*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+            Effect: Deny
+            Principal:
+              AWS: '*'
+            Resource:
+              - !Sub ${LogBucket.Arn}
+              - !Sub ${LogBucket.Arn}/*
+
+          # Allow the logging service to write logs
+          - Action: s3:PutObject
+            Condition:
+              ArnLike:
+                aws:SourceArn: !GetAtt LogBucket.Arn
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Resource:
+              - !Sub ${LogBucket.Arn}/*
+        Version: "2012-10-17"
+
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      Comment: This bucket is used by the CI/CD pipeline to store artifacts
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-build-artifacts-${AWS::AccountId}-${AWS::Region}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpirationInDays: 7
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LogBucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  ArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectAcl
+            Resource:
+              - !Sub ${ArtifactBucket.Arn}/*
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !GetAtt ArtifactBucket.Arn
+
+  DeployStackRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DeployStackPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:GetTemplateSummary
+                Resource:
+                  - arn:aws:cloudformation:*:*:stack/*
+                  - arn:aws:cloudformation:*:*:transform/*
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:CreateServiceLinkedRole
+                  - iam:DeleteRole
+                  - iam:DeleteServiceLinkedRole
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                Resource: arn:aws:iam::*:role/*
+        - PolicyName: DeployS3Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketPolicy
+                  - s3:GetBucketWebsite
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:DeleteBucketPolicy
+                  - s3:DeleteBucketWebsite
+                  - s3:PutLifecycleConfiguration
+                  - s3:PutBucketVersioning
+                  - s3:PutBucketCORS
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketAcl
+                  - s3:PutBucketNotification
+                  - s3:PutBucketWebsite
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutBucketPublicAccessBlock
+                Resource:
+                  - arn:aws:s3:::* # For bucket-level operations
+                  - arn:aws:s3:::*/* # For object-level operations
+        - PolicyName: DeployBackupVaultPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - backup:CreateBackupPlan
+                  - backup:CreateBackupSelection
+                  - backup:CreateBackupVault
+                  - backup:CreateLogicallyAirGappedBackupVault
+                  - backup:DeleteBackupVault
+                  - backup:DeleteBackupPlan
+                  - backup:DeleteBackupSelection
+                  - backup:DeleteBackupVaultAccessPolicy
+                  - backup:DeleteBackupVaultSharingPolicy
+                  - backup:DescribeBackupJob
+                  - backup:DescribeBackupVault
+                  - backup:DescribeRecoveryPoint
+                  - backup:GetBackupPlan
+                  - backup:GetBackupSelection
+                  - backup:GetRecoveryPointRestoreMetadata
+                  - backup:GetBackupVaultAccessPolicy
+                  - backup:GetBackupVaultSharingPolicy
+                  - backup:ListBackupPlans
+                  - backup:ListBackupSelections
+                  - backup:ListBackupVaults
+                  - backup:ListProtectedResourcesByBackupVault
+                  - backup:ListRecoveryPointsByBackupVault
+                  - backup:ListTags
+                  - backup:PutBackupVaultAccessPolicy
+                  - backup:PutBackupVaultSharingPolicy
+                  - backup:StartRestoreJob
+                  - backup:TagResource
+                  - backup:UpdateBackupPlan
+                Resource:
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*
+                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*/*
+        - PolicyName: DeployRAMPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ram:AssociateResourceShare
+                  - ram:AssociateResourceSharePermission
+                  - ram:CreatePermission
+                  - ram:CreateResourceShare
+                  - ram:DeletePermission
+                  - ram:DeleteResourceShare
+                  - ram:DisassociateResourceShare
+                  - ram:DisassociateResourceSharePermission
+                  - ram:GetPermission
+                  - ram:GetResourcePolicies
+                  - ram:GetResourceShareAssociations
+                  - ram:GetResourceShareInvitations
+                  - ram:GetResourceShares
+                  - ram:ListPendingInvitationResources
+                  - ram:ListPermissionAssociations
+                  - ram:ListPermissions
+                  - ram:ListPrincipals
+                  - ram:ListReplacePermissionAssociationsWork
+                  - ram:ListResources
+                  - ram:ListResourceSharePermissions
+                  - ram:ListResourceTypes
+                  - ram:ReplacePermissionAssociations
+                  - ram:TagResource
+                  - ram:UntagResource
+                  - ram:UpdateResourceShare
+                Resource:
+                  - !Sub arn:aws:ram::${AWS::AccountId}:permission/*
+                  - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:permission/*
+                  - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
+                  - arn:aws:iam::aws:policy/*
+
+  BuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: BuildArtifactPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource:
+                  - !Sub ${ArtifactBucket.Arn}/*
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
+
+  PipelineExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: GitHubPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: codestar-connections:UseConnection
+                Resource: !Ref GitHubConnectionArn
+        - PolicyName: DelegateRolesPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource:
+                  - !GetAtt DeployStackRole.Arn
+                Condition:
+                  StringEquals:
+                    iam:PassedToService:
+                      - cloudformation.amazonaws.com
+                      - codebuild.amazonaws.com
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
+        - PolicyName: ArtifactBucketPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketVersioning
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource:
+                  - !GetAtt ArtifactBucket.Arn
+                  - !Sub ${ArtifactBucket.Arn}/*
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: !GetAtt CodeBuildProject.Arn
+        - PolicyName: CloudFormationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Metadata:
+      Comment: CodeBuild project for deployment of all other stacks
+      cfn_nag:
+        rules_to_suppress:
+          - id: W32
+            reason: Leaving 'EncryptionKey' unspecified to use the default key provided by AWS, which is fine for this use case.
+    Properties:
+      Name: !Sub ${AWS::StackName}-build-project-${AWS::AccountId}
+      ServiceRole: !GetAtt BuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Location: LOCAL
+        Modes:
+          - LOCAL_CUSTOM_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_LARGE
+        Image: !Ref CodeBuildImage
+        PrivilegedMode: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.yml
+      TimeoutInMinutes: 120
+
+  # Deployment pipeline with stages that deploys a stack for each environment
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub ${AWS::StackName}-build-pipeline-${AWS::AccountId}
+      RoleArn: !GetAtt PipelineExecutionRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      ExecutionMode: SUPERSEDED
+      PipelineType: V2
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: "1"
+              Configuration:
+                ConnectionArn: !Ref GitHubConnectionArn
+                FullRepositoryId: !Sub ${GitHubOwner}/${GitHubRepo}
+                BranchName: !Ref GitHubBranch
+              OutputArtifacts:
+                - Name: SourceOutput
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: Build
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              Configuration:
+                ProjectName: !Ref CodeBuildProject
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+        - Name: DeploySandbox
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt DeployStackRole.Arn
+                StackName: !Sub ${AWS::StackName}-sandbox
+                TemplatePath: BuildOutput::template.yml
+                ParameterOverrides: !Sub |
+                  {
+                  "AllowedAccountIds": "${AccountIdSandbox},${AccountIdDev}",
+                  "VaultMaxRetentionDays": "14"
+                  }
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+        - Name: DeployDev
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt DeployStackRole.Arn
+                StackName: !Sub ${AWS::StackName}-dev
+                TemplatePath: BuildOutput::template.yml
+                ParameterOverrides: !Sub |
+                  {
+                  "AllowedAccountIds": "${AccountIdDev},${AccountIdSandbox}",
+                  "VaultMaxRetentionDays": "14"
+                  }
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+        - Name: DeployTest
+          Actions:
+            - Name: Approve
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: "1"
+              RunOrder: 1
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt DeployStackRole.Arn
+                StackName: !Sub ${AWS::StackName}-test
+                TemplatePath: BuildOutput::template.yml
+                ParameterOverrides: !Sub |
+                  {
+                  "AllowedAccountIds": "${AccountIdTest},${AccountIdSandbox}",
+                  "VaultMaxRetentionDays": "365"
+                  }
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+        - Name: DeployProd
+          Actions:
+            - Name: Approve
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: "1"
+              RunOrder: 1
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: "1"
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt DeployStackRole.Arn
+                StackName: !Sub ${AWS::StackName}-prod
+                TemplatePath: BuildOutput::template.yml
+                ParameterOverrides: !Sub |
+                  {
+                  "AllowedAccountIds": "${AccountIdProd},${AccountIdTest}",
+                  "VaultMaxRetentionDays": "365"
+                  }
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+
+Outputs:
+  PipelineURL:
+    Description: CodePipeline URL
+    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
