@@ -16,10 +16,6 @@ Metadata:
           - GitHubBranch
           - GitHubConnectionArn
       - Label:
-          default: CodeBuild configuration
-        Parameters:
-          - CodeBuildImage
-      - Label:
           default: AWS account IDs of the environments in use
         Parameters:
           - AccountIdSandbox
@@ -44,10 +40,6 @@ Parameters:
     Description: AWS Account ID of the prod account
     Type: String
 
-  CodeBuildImage:
-    Type: String
-    Default: aws/codebuild/standard:7.0
-
   GitHubOwner:
     Description: GitHub repository owner
     Type: String
@@ -70,10 +62,6 @@ Resources:
     Type: AWS::S3::Bucket
     Metadata:
       Comment: This bucket stores access logs for other buckets
-      cfn_nag:
-        rules_to_suppress:
-          - id: W35
-            reason: Logging access to the log bucket is not required and would lead to an endless chain of log buckets. Should we have buckets all the way down?
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -159,30 +147,6 @@ Resources:
         RestrictPublicBuckets: true
       VersioningConfiguration:
         Status: Enabled
-
-  ArtifactBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref ArtifactBucket
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action:
-              - s3:GetObject
-              - s3:PutObject
-              - s3:PutObjectAcl
-            Resource:
-              - !Sub ${ArtifactBucket.Arn}/*
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action:
-              - s3:ListBucket
-            Resource:
-              - !GetAtt ArtifactBucket.Arn
 
   DeployStackRole:
     Type: AWS::IAM::Role
@@ -329,42 +293,6 @@ Resources:
                   - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
                   - arn:aws:iam::aws:policy/*
 
-  BuildServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: codebuild.amazonaws.com
-            Action: sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: BuildArtifactPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:PutObject
-                Resource:
-                  - !Sub ${ArtifactBucket.Arn}/*
-        - PolicyName: LogPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource:
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
-
   PipelineExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -396,19 +324,6 @@ Resources:
                   StringEquals:
                     iam:PassedToService:
                       - cloudformation.amazonaws.com
-                      - codebuild.amazonaws.com
-        - PolicyName: LogPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource:
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*:*
         - PolicyName: ArtifactBucketPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -423,15 +338,6 @@ Resources:
                 Resource:
                   - !GetAtt ArtifactBucket.Arn
                   - !Sub ${ArtifactBucket.Arn}/*
-        - PolicyName: CodeBuildPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - codebuild:BatchGetBuilds
-                  - codebuild:StartBuild
-                Resource: !GetAtt CodeBuildProject.Arn
         - PolicyName: CloudFormationPolicy
           PolicyDocument:
             Version: "2012-10-17"
@@ -449,35 +355,9 @@ Resources:
                   - cloudformation:ExecuteChangeSet
                 Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*
 
-  CodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Metadata:
-      Comment: CodeBuild project for deployment of all other stacks
-      cfn_nag:
-        rules_to_suppress:
-          - id: W32
-            reason: Leaving 'EncryptionKey' unspecified to use the default key provided by AWS, which is fine for this use case.
-    Properties:
-      Name: !Sub ${AWS::StackName}-build-project-${AWS::AccountId}
-      ServiceRole: !GetAtt BuildServiceRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Cache:
-        Location: LOCAL
-        Modes:
-          - LOCAL_CUSTOM_CACHE
-        Type: LOCAL
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_LARGE
-        Image: !Ref CodeBuildImage
-        PrivilegedMode: false
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: buildspec.yml
-      TimeoutInMinutes: 120
-
-  # Deployment pipeline with stages that deploys a stack for each environment
+  # Deployment pipeline with stages that deploys a stack for each environment.
+  # The deploy stages take the template straight from the source artifact, so it is byte-identical to the commit.
+  # There is no build stage: the templates are linted by the GitHub workflow before they are merged.
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -504,21 +384,6 @@ Resources:
               OutputArtifacts:
                 - Name: SourceOutput
               RunOrder: 1
-        - Name: Build
-          Actions:
-            - Name: Build
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Provider: CodeBuild
-                Version: "1"
-              Configuration:
-                ProjectName: !Ref CodeBuildProject
-              InputArtifacts:
-                - Name: SourceOutput
-              OutputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 1
         - Name: DeploySandbox
           Actions:
             - Name: Deploy
@@ -532,14 +397,14 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
-                TemplatePath: BuildOutput::template.yml
+                TemplatePath: SourceOutput::templates/template.yml
                 ParameterOverrides: !Sub |
                   {
                   "AllowedAccountIds": "${AccountIdSandbox},${AccountIdDev}",
                   "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: SourceOutput
               RunOrder: 1
         - Name: DeployDev
           Actions:
@@ -554,14 +419,14 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-dev
-                TemplatePath: BuildOutput::template.yml
+                TemplatePath: SourceOutput::templates/template.yml
                 ParameterOverrides: !Sub |
                   {
                   "AllowedAccountIds": "${AccountIdDev},${AccountIdSandbox}",
                   "VaultMaxRetentionDays": "14"
                   }
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: SourceOutput
               RunOrder: 1
         - Name: DeployTest
           Actions:
@@ -583,14 +448,14 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
-                TemplatePath: BuildOutput::template.yml
+                TemplatePath: SourceOutput::templates/template.yml
                 ParameterOverrides: !Sub |
                   {
                   "AllowedAccountIds": "${AccountIdTest},${AccountIdSandbox}",
                   "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: SourceOutput
               RunOrder: 2
         - Name: DeployProd
           Actions:
@@ -612,14 +477,14 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-prod
-                TemplatePath: BuildOutput::template.yml
+                TemplatePath: SourceOutput::templates/template.yml
                 ParameterOverrides: !Sub |
                   {
                   "AllowedAccountIds": "${AccountIdProd},${AccountIdTest}",
                   "VaultMaxRetentionDays": "365"
                   }
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: SourceOutput
               RunOrder: 2
 
 Outputs:
