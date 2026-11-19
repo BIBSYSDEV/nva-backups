@@ -368,6 +368,14 @@ Resources:
         Location: !Ref ArtifactBucket
       ExecutionMode: SUPERSEDED
       PipelineType: V2
+      Triggers:
+        - ProviderType: CodeStarSourceConnection
+          GitConfiguration:
+            SourceActionName: Source
+            Push:
+              - Branches:
+                  Includes:
+                    - !Ref GitHubBranch
       Stages:
         - Name: Source
           Actions:
