@@ -389,7 +389,6 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-sandbox
                 TemplatePath: SourceOutput::templates/template.yml
@@ -411,7 +410,6 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-dev
                 TemplatePath: SourceOutput::templates/template.yml
@@ -440,7 +438,6 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-test
                 TemplatePath: SourceOutput::templates/template.yml
@@ -469,7 +466,6 @@ Resources:
                 Version: "1"
               Configuration:
                 ActionMode: CREATE_UPDATE
-                Capabilities: CAPABILITY_NAMED_IAM
                 RoleArn: !GetAtt DeployStackRole.Arn
                 StackName: !Sub ${AWS::StackName}-prod
                 TemplatePath: SourceOutput::templates/template.yml
