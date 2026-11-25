@@ -180,19 +180,6 @@ Resources:
                 Resource:
                   - arn:aws:cloudformation:*:*:stack/*
                   - arn:aws:cloudformation:*:*:transform/*
-              - Effect: Allow
-                Action:
-                  - iam:CreateRole
-                  - iam:CreateServiceLinkedRole
-                  - iam:DeleteRole
-                  - iam:DeleteServiceLinkedRole
-                  - iam:PutRolePolicy
-                  - iam:DeleteRolePolicy
-                  - iam:GetRole
-                  - iam:GetRolePolicy
-                  - iam:AttachRolePolicy
-                  - iam:DetachRolePolicy
-                Resource: arn:aws:iam::*:role/*
         - PolicyName: DeployS3Policy
           PolicyDocument:
             Version: "2012-10-17"
