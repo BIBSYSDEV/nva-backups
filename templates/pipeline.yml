@@ -158,127 +158,76 @@ Resources:
             Principal:
               Service: cloudformation.amazonaws.com
             Action: sts:AssumeRole
+      # Only what CloudFormation needs for the vault and resource share in templates/template.yml.
+      # The vaults are named ${AWS::StackName}-<stage>-vault, so the policies match ${AWS::StackName}-*.
+      # The backup vault sharing policy actions are permission-only actions for sharing a vault through AWS RAM.
       Policies:
-        - PolicyName: DeployStackPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cloudformation:CreateStack
-                  - cloudformation:DeleteStack
-                  - cloudformation:DescribeStacks
-                  - cloudformation:DescribeStackEvents
-                  - cloudformation:UpdateStack
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:DeleteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:SetStackPolicy
-                  - cloudformation:ValidateTemplate
-                  - cloudformation:GetTemplateSummary
-                Resource:
-                  - arn:aws:cloudformation:*:*:stack/*
-                  - arn:aws:cloudformation:*:*:transform/*
-        - PolicyName: DeployS3Policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetBucketPolicy
-                  - s3:GetBucketWebsite
-                  - s3:CreateBucket
-                  - s3:DeleteBucket
-                  - s3:DeleteBucketPolicy
-                  - s3:DeleteBucketWebsite
-                  - s3:PutLifecycleConfiguration
-                  - s3:PutBucketVersioning
-                  - s3:PutBucketCORS
-                  - s3:PutBucketPolicy
-                  - s3:PutBucketAcl
-                  - s3:PutBucketNotification
-                  - s3:PutBucketWebsite
-                  - s3:PutEncryptionConfiguration
-                  - s3:PutBucketPublicAccessBlock
-                Resource:
-                  - arn:aws:s3:::* # For bucket-level operations
-                  - arn:aws:s3:::*/* # For object-level operations
         - PolicyName: DeployBackupVaultPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
+              - Sid: ManagePipelineVaults
+                Effect: Allow
                 Action:
-                  - backup:CreateBackupPlan
-                  - backup:CreateBackupSelection
-                  - backup:CreateBackupVault
                   - backup:CreateLogicallyAirGappedBackupVault
                   - backup:DeleteBackupVault
-                  - backup:DeleteBackupPlan
-                  - backup:DeleteBackupSelection
                   - backup:DeleteBackupVaultAccessPolicy
                   - backup:DeleteBackupVaultSharingPolicy
-                  - backup:DescribeBackupJob
                   - backup:DescribeBackupVault
-                  - backup:DescribeRecoveryPoint
-                  - backup:GetBackupPlan
-                  - backup:GetBackupSelection
-                  - backup:GetRecoveryPointRestoreMetadata
                   - backup:GetBackupVaultAccessPolicy
                   - backup:GetBackupVaultSharingPolicy
-                  - backup:ListBackupPlans
-                  - backup:ListBackupSelections
-                  - backup:ListBackupVaults
-                  - backup:ListProtectedResourcesByBackupVault
-                  - backup:ListRecoveryPointsByBackupVault
                   - backup:ListTags
                   - backup:PutBackupVaultAccessPolicy
                   - backup:PutBackupVaultSharingPolicy
-                  - backup:StartRestoreJob
                   - backup:TagResource
-                  - backup:UpdateBackupPlan
-                Resource:
-                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*
-                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:*/*
-                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*
-                  - !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:recovery-point:*/*
+                Resource: !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:${AWS::StackName}-*
+              - Sid: ListVaults
+                Effect: Allow
+                Action: backup:ListBackupVaults
+                Resource: "*"
         - PolicyName: DeployRAMPolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Effect: Allow
+              - Sid: CreateInternalSharesOfPipelineVaults
+                Effect: Allow
+                Action: ram:CreateResourceShare
+                Resource: !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
+                Condition:
+                  Bool:
+                    ram:RequestedAllowsExternalPrincipals: "false"
+                  ForAllValues:ArnLike:
+                    ram:RequestedResourceArns: !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:${AWS::StackName}-*
+              - Sid: UpdateSharesWithoutExternalPrincipals
+                Effect: Allow
+                Action: ram:UpdateResourceShare
+                Resource: !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
+                Condition:
+                  BoolIfExists:
+                    ram:RequestedAllowsExternalPrincipals: "false"
+              - Sid: AssociatePipelineVaults
+                Effect: Allow
+                Action: ram:AssociateResourceShare
+                Resource: !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
+                Condition:
+                  ForAllValues:ArnLike:
+                    ram:RequestedResourceArns: !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:${AWS::StackName}-*
+              - Sid: ManageShares
+                Effect: Allow
                 Action:
-                  - ram:AssociateResourceShare
                   - ram:AssociateResourceSharePermission
-                  - ram:CreatePermission
-                  - ram:CreateResourceShare
-                  - ram:DeletePermission
                   - ram:DeleteResourceShare
                   - ram:DisassociateResourceShare
-                  - ram:DisassociateResourceSharePermission
-                  - ram:GetPermission
-                  - ram:GetResourcePolicies
-                  - ram:GetResourceShareAssociations
-                  - ram:GetResourceShareInvitations
-                  - ram:GetResourceShares
-                  - ram:ListPendingInvitationResources
-                  - ram:ListPermissionAssociations
-                  - ram:ListPermissions
-                  - ram:ListPrincipals
-                  - ram:ListReplacePermissionAssociationsWork
-                  - ram:ListResources
                   - ram:ListResourceSharePermissions
-                  - ram:ListResourceTypes
-                  - ram:ReplacePermissionAssociations
                   - ram:TagResource
                   - ram:UntagResource
-                  - ram:UpdateResourceShare
-                Resource:
-                  - !Sub arn:aws:ram::${AWS::AccountId}:permission/*
-                  - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:permission/*
-                  - !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
-                  - arn:aws:iam::aws:policy/*
+                Resource: !Sub arn:aws:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*
+              - Sid: ReadShares
+                Effect: Allow
+                Action:
+                  - ram:GetResourceShareAssociations
+                  - ram:GetResourceShares
+                Resource: "*"
 
   PipelineExecutionRole:
     Type: AWS::IAM::Role
