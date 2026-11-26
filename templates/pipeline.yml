@@ -172,14 +172,18 @@ Resources:
                   - backup:CreateLogicallyAirGappedBackupVault
                   - backup:DeleteBackupVault
                   - backup:DeleteBackupVaultAccessPolicy
+                  - backup:DeleteBackupVaultNotifications
                   - backup:DeleteBackupVaultSharingPolicy
                   - backup:DescribeBackupVault
                   - backup:GetBackupVaultAccessPolicy
+                  - backup:GetBackupVaultNotifications
                   - backup:GetBackupVaultSharingPolicy
                   - backup:ListTags
                   - backup:PutBackupVaultAccessPolicy
+                  - backup:PutBackupVaultNotifications
                   - backup:PutBackupVaultSharingPolicy
                   - backup:TagResource
+                  - backup:UntagResource
                 Resource: !Sub arn:aws:backup:${AWS::Region}:${AWS::AccountId}:backup-vault:${AWS::StackName}-*
               - Sid: ListVaults
                 Effect: Allow
@@ -228,6 +232,10 @@ Resources:
                   - ram:GetResourceShareAssociations
                   - ram:GetResourceShares
                 Resource: "*"
+              - Sid: ReadManagedPermissions
+                Effect: Allow
+                Action: ram:GetPermission
+                Resource: arn:aws:ram::aws:permission/*
 
   PipelineExecutionRole:
     Type: AWS::IAM::Role
