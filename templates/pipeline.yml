@@ -193,6 +193,7 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              # The role may create a share only if the request rules out external principals, and any vault in it must be one of this pipeline's vaults.
               - Sid: CreateInternalSharesOfPipelineVaults
                 Effect: Allow
                 Action: ram:CreateResourceShare
@@ -209,6 +210,7 @@ Resources:
                 Condition:
                   BoolIfExists:
                     ram:RequestedAllowsExternalPrincipals: "false"
+              # The role may add things to a share, but any vault it adds must be one of this pipeline's vaults.
               - Sid: AssociatePipelineVaults
                 Effect: Allow
                 Action: ram:AssociateResourceShare
